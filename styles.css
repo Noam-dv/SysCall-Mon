@@ -1,0 +1,222 @@
+/* =========================
+   CHAT GPT STYLING
+   ========================= */
+
+
+
+
+
+
+
+
+
+
+   
+QWidget {
+    background-color: #0d0f14;
+    color: #cfd2d8;
+    font-family: Consolas, Menlo, monospace;
+    font-size: 11px;
+}
+
+/* =========================
+   Buttons
+   ========================= */
+QPushButton {
+    background-color: qlineargradient(
+        x1:0, y1:0, x2:0, y2:1,
+        stop:0 #1c212b,
+        stop:1 #141821
+    );
+    border: 1px solid #2a2f3a;
+    border-radius: 6px;
+    padding: 6px 14px;
+    color: #d6dae1;
+}
+
+QPushButton:hover {
+    background-color: qlineargradient(
+        x1:0, y1:0, x2:0, y2:1,
+        stop:0 #242a38,
+        stop:1 #1b2030
+    );
+    border: 1px solid #3a4255;
+}
+
+QPushButton:pressed {
+    background-color: #11151d;
+    border: 1px solid #3a4255;
+}
+
+QPushButton:disabled {
+    background-color: #121620;
+    color: #6f7585;
+    border: 1px solid #1f2430;
+}
+
+/* =========================
+   Line Edit (Search)
+   ========================= */
+QLineEdit {
+    background-color: #11151d;
+    border: 1px solid #2a2f3a;
+    border-radius: 5px;
+    padding: 5px 8px;
+    color: #e6e8ec;
+    selection-background-color: #39456a;
+}
+
+QLineEdit:focus {
+    border: 1px solid #3f4a6d;
+    background-color: #0f1320;
+}
+
+/* =========================
+   Table
+   ========================= */
+QTableWidget {
+    background-color: #0d0f14;
+    border: 1px solid #1f2430;
+    gridline-color: #1a1f2b;
+    alternate-background-color: #10141c;
+}
+
+QTableWidget::item {
+    padding: 4px 6px;
+    border: none;
+}
+
+QTableWidget::item:selected {
+    background-color: #243055;
+    color: #ffffff;
+}
+
+QTableWidget::item:selected:!active {
+    background-color: #1c243f;
+    color: #d0d4dc;
+}
+
+/* =========================
+   Header
+   ========================= */
+QHeaderView::section {
+    background-color: qlineargradient(
+        x1:0, y1:0, x2:0, y2:1,
+        stop:0 #151a25,
+        stop:1 #10141c
+    );
+    border: 1px solid #1f2430;
+    padding: 5px 6px;
+    color: #9fa6b5;
+    font-weight: bold;
+}
+
+QHeaderView::section:hover {
+    background-color: #1b2130;
+}
+
+/* =========================
+   Scrollbars (subtle, not ugly)
+   ========================= */
+QScrollBar:vertical {
+    background: #0d0f14;
+    width: 10px;
+    margin: 0px;
+}
+
+QScrollBar::handle:vertical {
+    background: #2a2f3a;
+    min-height: 20px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #3a4255;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+QScrollBar:horizontal {
+    background: #0d0f14;
+    height: 10px;
+    margin: 0px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #2a2f3a;
+    min-width: 20px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background: #3a4255;
+}
+
+/* =========================
+   Labels
+   ========================= */
+QLabel {
+    color: #9da3b0;
+}
+
+/* Status bar emphasis */
+QLabel#status {
+    color: #b4b9c7;
+}
+
+/* =========================
+   Subtle separators
+   ========================= */
+QFrame {
+    border: 1px solid #1f2430;
+}
+QPushButton {
+    transition: background-color 120ms ease,
+                border-color 120ms ease,
+                color 120ms ease;
+}
+
+QPushButton:hover {
+    background-color: qlineargradient(
+        x1:0, y1:0, x2:0, y2:1,
+        stop:0 #262c3a,
+        stop:1 #1e2331
+    );
+    border-color: #4b5a88;
+}
+
+QPushButton:hover:!pressed {
+    box-shadow: 0 0 6px rgba(90, 120, 200, 0.15);
+}
+
+QLineEdit:hover {
+    border: 1px solid #3a4565;
+}
+
+QLineEdit:focus {
+    border: 1px solid #5a6fb3;
+    box-shadow: 0 0 8px rgba(90, 120, 200, 0.25);
+}
+
+QTableWidget::item:hover {
+    background-color: #1a2133;
+}
+QTableWidget::item:selected {
+    background-color: #2b3a6a;
+    color: #ffffff;
+}
+
+QTableWidget::item:selected:hover {
+    background-color: #33417a;
+}
+QHeaderView::section:hover {
+    background-color: #20273a;
+    color: #cdd6ff;
+}
+QScrollBar::handle:vertical:hover,
+QScrollBar::handle:horizontal:hover {
+    background: #4a5680;
+}
