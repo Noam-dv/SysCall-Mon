@@ -56,6 +56,14 @@ class ProcessUtil:
             return None
     
     @staticmethod
+    def _matches(proc, query):
+        data = proc.data
+        name = str(data.get('name', '')).lower()
+        user = str(data.get('username', '')).lower()
+        pid_str = str(data.get('pid', ''))
+        return query in name or query in user or query in pid_str
+
+    @staticmethod
     def filter_processes(proc_ls, query):
         if not query:
             return proc_ls
@@ -63,13 +71,6 @@ class ProcessUtil:
         query = query.lower()
         filtered = []
         for proc in proc_ls:
-            if _matches(proc,query):
+            if ProcessUtil._matches(proc,query):
                 filtered.append(proc)
         return filtered
-    
-    @staticmethod
-    def _matches(proc, query):
-        name = str(data.get('name', '')).lower()
-        user = str(data.get('username', '')).lower()
-        pid_str = str(data.get('pid', ''))
-        return query in name or query in user or query in pid_str
