@@ -1,0 +1,135 @@
+/* =========================
+   CHAT GPT STYLING
+   ========================= */
+
+/* =========================
+   MONITOR WINDOW BASE
+   ========================= */
+
+QMainWindow, QWidget {
+    background-color: #0f1218;
+    color: #d6d9df;
+    font-family: Consolas, Menlo, monospace;
+    font-size: 11px;
+}
+
+/* =========================
+   Tab Widget
+   ========================= */
+
+QTabWidget::pane {
+    border: 1px solid #252a36;
+    top: -1px;
+    background-color: #12141a;
+}
+
+QTabBar::tab {
+    background: #181c26;
+    border: 1px solid #252a36;
+    border-bottom: none;
+    padding: 6px 12px;
+    color: #9aa1b3;
+    min-width: 90px;
+}
+
+QTabBar::tab:selected {
+    background: #1f2536;
+    color: #e6e9f0;
+    border-color: #4b5a88;
+}
+
+QTabBar::tab:hover {
+    background: #232a3e;
+    color: #d6dcff;
+}
+
+QTabBar::tab:!selected {
+    margin-top: 2px;
+}
+
+/* =========================
+   Table (Syscall Log)
+   ========================= */
+
+QTableWidget {
+    background-color: #12141a;
+    border: 1px solid #252a36;
+    gridline-color: #252a36;
+    alternate-background-color: #161a24;
+}
+
+QTableWidget::item {
+    padding: 3px 6px;
+    border: none;
+    color: #d6d9df;
+}
+
+QTableWidget::item:selected {
+    background-color: #2f3e6a;
+    color: #ffffff;
+}
+
+QTableWidget::item:selected:!active {
+    background-color: #273256;
+    color: #e1e4ea;
+}
+
+/* =========================
+   Header
+   ========================= */
+
+QHeaderView::section {
+    background-color: qlineargradient(
+        x1:0, y1:0, x2:0, y2:1,
+        stop:0 #1c2130,
+        stop:1 #161a24
+    );
+    border: 1px solid #252a36;
+    padding: 4px 6px;
+    color: #9fa7bc;
+    font-weight: bold;
+}
+
+QHeaderView::section:hover {
+    background-color: #242b40;
+    color: #d6dcff;
+}
+
+/* =========================
+   Scrollbars
+   ========================= */
+
+QScrollBar:vertical {
+    background: #12141a;
+    width: 9px;
+}
+
+QScrollBar::handle:vertical {
+    background: #3a4155;
+    min-height: 18px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #4f5a7a;
+}
+
+QScrollBar::add-line,
+QScrollBar::sub-line {
+    height: 0px;
+}
+
+QScrollBar:horizontal {
+    background: #12141a;
+    height: 9px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #3a4155;
+    min-width: 18px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background: #4f5a7a;
+}

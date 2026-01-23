@@ -2,7 +2,7 @@ import sys
 from PySide6.QtWidgets import QApplication
 from ui import MonUI
 from proc_util import ProcessUtil
-
+from monitor_window import MonitorWindow
 class MonApp: 
     # entry
     def __init__(self):
@@ -54,6 +54,8 @@ class MonApp:
         print("monitoring:", selected)  # hook etw here soon
         #monitoring logic will be added next commit
 
+        self.monitor_win = MonitorWindow(selected) #open monitor
+        self.monitor_win.show()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
