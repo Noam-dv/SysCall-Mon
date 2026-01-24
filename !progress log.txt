@@ -1,0 +1,25 @@
+First main issue:
+Threads conflicting - tkinter, then pyside6 all use a main thread and therefore i had DEBUG errors due to library specific threading needed
+
+second issue:
+[DEBUG] imported etw successfully
+monitoring: [(11452, 'Notepad.exe')]
+[DEBUG] __init__ with pids: [11452]
+[DEBUG] tracking PID 11452 Notepad.exe
+[DEBUG] started
+[DEBUG] starting thread
+[DEBUG] _run_trace() entered on thread
+[DEBUG] loaded 2 providers
+[DEBUG] creating etw instance
+[DEBUG] etw instance created
+[DEBUG] calling etw.start()
+[DEBUG] thread started
+[DEBUG] etw.start() stopped
+[DEBUG] _run_trace() exiting
+
+as you can see above, etw instance automatically closes.
+this could be due to several reasons, but i think in my case its conflicting session names
+
+after adding dynamic session name swe get the same result
+im thinking we might be using outdated pywintrace usage ( i took code from example uses)
+
