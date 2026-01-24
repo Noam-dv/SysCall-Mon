@@ -3,9 +3,14 @@ from PySide6.QtWidgets import QApplication
 from ui import MonUI
 from proc_util import ProcessUtil
 from monitor_window import MonitorWindow
-class MonApp: 
-    # entry
-    def __init__(self):
+from sys_tracer import SysTracer
+
+
+class MonApp:
+    def __init__(self, app):
+        self.app = app
+        self.app.aboutToQuit.connect(self.cleanup)
+
         self.util = ProcessUtil()
         self.all_procs = []
         self.filtered = []
@@ -13,9 +18,18 @@ class MonApp:
         self.ui = MonUI(self)
         self.ui.show()
 
+        self.monitor_window = None
+        self.sys_tracer = None
+
         self.refresh_processes()
 
-    def refresh_processes(self): # reloads procs from procutil (freezes window for short period of time, will be fixed)
+    def cleanup(self):
+        if self.sys_tracer:
+            self.sys_tracer.stop()
+            self.sys_tracer.wait()
+            self.sys_tracer = None
+
+    def refresh_processes(self):
         self.ui.update_status("loading processes...")
 
         self.all_procs = self.util.get_all_procs()
@@ -23,8 +37,8 @@ class MonApp:
         self.apply_filter()
 
         self.ui.update_status("ready")
- 
-    def apply_filter(self): # search filter
+
+    def apply_filter(self):
         search_text = self.ui.search_entry.text()
         self.filtered = self.util.filter_processes(self.all_procs, search_text)
 
@@ -34,7 +48,7 @@ class MonApp:
 
         self.ui.update_count(len(self.filtered), len(self.all_procs))
 
-    def on_search_changed(self): # callback
+    def on_search_changed(self):
         self.apply_filter()
 
     def on_tree_select(self, _):
@@ -51,13 +65,28 @@ class MonApp:
 
         text = ", ".join([f"{n} [{p}]" for p, n in selected])
         self.ui.update_status(f"monitoring: {text}")
-        print("monitoring:", selected)  # hook etw here soon
-        #monitoring logic will be added next commit
+        print("monitoring:", selected, flush=True)
 
-        self.monitor_win = MonitorWindow(selected) #open monitor
-        self.monitor_win.show()
+        pids = [int(p) for p, _ in selected]
+
+        # close old tracer
+        if self.sys_tracer:
+            self.sys_tracer.stop()
+            self.sys_tracer.wait()
+            self.sys_tracer = None
+
+        # new window
+        self.monitor_window = MonitorWindow(selected)
+        self.monitor_window.setWindowTitle(f"Monitoring: {text}")
+        self.monitor_window.show()
+
+        # start tracer
+        self.sys_tracer = SysTracer(pids)
+        self.sys_tracer.new_event.connect(self.monitor_window.add_log)
+        self.sys_tracer.start()
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    MonApp()
+    MonApp(app)
     sys.exit(app.exec())
