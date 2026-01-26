@@ -3,6 +3,7 @@ First main issue:
 Threads conflicting - tkinter, then pyside6 all use a main thread and therefore i had DEBUG errors due to library specific threading needed
 
 second issue:
+```
 [DEBUG] imported etw successfully
 monitoring: [(11452, 'Notepad.exe')]
 [DEBUG] __init__ with pids: [11452]
@@ -17,6 +18,7 @@ monitoring: [(11452, 'Notepad.exe')]
 [DEBUG] thread started
 [DEBUG] etw.start() stopped
 [DEBUG] _run_trace() exiting
+```
 
 as you can see above, etw instance automatically closes.
 this could be due to several reasons, but i think in my case its conflicting session names
@@ -87,6 +89,7 @@ run with ```sudo -E python3 main.py```
 
 after extendning this it works! i tried to trace pythonj and got about a billion write syscalls displayed
 ### the log:
+```
 noam@noam-VirtualBox:~/sysmon$ sudo -E python3 main.py\n
 ....
 tracing pid 6978
@@ -95,7 +98,7 @@ Possibly lost 226 samples
 Possibly lost 315 samples
 QBasicTimer::start: QBasicTimer can only be used with threads started with QThread
 Segmentation fault
-
+```
 theres so many calls that perf buffer overflows
 i guess this is normal ill try to possibly filter systemcalls further
 also we must use a qthread to work with the ui cuz we got a crash
