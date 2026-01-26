@@ -60,3 +60,8 @@ moved to PyQt6 heard it might be better ?
 made some new UI 
 tried to organize my code slightly better and document it a bit more
 
+## LINUX COMMIT #2 AND #3
+added simple sorting 
+implemented more sturdy icon fetching logic cuz that really pissed me off that it was spamming the default icon
+next we will start working on the systracer logic 
+hopefully its easier on linux

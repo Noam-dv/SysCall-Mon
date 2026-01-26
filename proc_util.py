@@ -50,11 +50,7 @@ class ProcessUtil:
             return 0.0
 
     def _get_icon(self, p):
-        #try to grab icon from gotten path
-        #sometimes wont work but its fine
 
-        #im still learning to develop on linux
-        #tried to implement this better
         try:
             name = p.name()
             icon = QIcon.fromTheme(name.lower())
@@ -64,7 +60,39 @@ class ProcessUtil:
             pass
         return QIcon.fromTheme("application-x-executable") #fallback
 
-    def get_cpu_percent(self, pid):
+    def _get_icon(self, p): #officially can no longer work on windows i believe
+        #try to grab icon from gotten path
+        #sometimes wont work but its fine
+
+        #im still learning to develop on linux
+        #tried to implement this better
+        try:
+            import gi #import on runtime
+            gi.require_version("Gio","2.0")
+            from gi.repository import Gio
+            
+            exe = p.exe()
+            app = Gio.AppInfo.get_default_for_type("application/x-executable", False)
+            name = os.path.basename(exe) #try finding by executable name
+            for a in Gio.AppInfo.get_all(): #more efficient icon finding
+                try:
+                    if name.lower() in a.get_executable().lower():
+                        icon = a.get_icon()
+                        if icon:
+                            return QIcon.fromTheme(icon.to_string())
+                except:
+                    pass
+        except:
+            pass
+        try:
+            icon = QIcon.fromTheme(p.name().lower()) #qt theme icon (i wanna implement themes later)
+            if not icon.isNull():
+                return icon
+        except:
+            pass
+        return QIcon.fromTheme("application-x-executable") #default icon
+
+    def get_cpu_percent(self, pid): 
         #get cpu usage manually
         #prepping for real tracer logic
         try:
