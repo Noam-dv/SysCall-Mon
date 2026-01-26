@@ -119,6 +119,37 @@ with litterally no detail tho so we'll work on that
 lag still exists
 we will haveto work on that
 
+## categorization
+
+### FILE_IO
+actual data read write to files
+
+### FS_META
+filesystem structure and permissions not data itself but still important
+
+### PROCESS
+process creation exec exit signals basically program control
+
+### MEMORY
+virtual memory management mapping protection and heap stuff
+
+### IPC
+local process communication looks like network but isnt ( i dont really understand this one )
+
+### NETWORK
+networking to other machines
+
+### EVENTS
+waiting and notification syscalls (epoll poll type stuff)
+
+### TIME
+sleeping timers and clocks
+
+### SECURITY
+things that change authority
+
+### OTHER
+other
 
 ## anomaly detection
 now the system tracer is kind of done (not really but for now its good to start on the main thing)
