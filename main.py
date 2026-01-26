@@ -19,8 +19,8 @@ class MonApp:
         self.ui.show()
 
         #monitor window for syscall tracers
-        self.monitor = MonitorWindow()
-        self.monitor.show()
+        self.monitor = None
+
         self.tracers = {} #pid: systracer
         self.refresh()
 
@@ -73,8 +73,11 @@ class MonApp:
             self.ui.set_status("nothing selected")
             return
 
-        #small print for syscall tracer later
-        print("TRACE:", sel)
+        if self.monitor is None: #move here so monitor window
+        #only opens when we start tracing
+
+            self.monitor = MonitorWindow()
+            self.monitor.show()
 
         for pid, name in sel:
             if pid in self.tracers:
@@ -89,16 +92,18 @@ class MonApp:
         self.ui.set_status(f"will trace {len(sel)} processes")
 
     def poll_tracers(self):
-        #pull events from tracer queues
-        #THIS is the safe boundary between bcc threads and qt
+        #fixxed poll
+        #dont poll ALLLLLL 
+        #do only 50 max  in one ui tick
+        m = 50 #modify as u wish, risky tho
+        
         for pid, tracer in self.tracers.items():
-            while True:
+            for i in range(m): #max events per tick
                 try:
                     evt = tracer.events.get_nowait()
                     self.monitor.add_event(evt)
                 except:
                     break
-
 
 #small ui class (messy js for testing for now)
 #will clean up later

@@ -102,3 +102,19 @@ Segmentation fault
 theres so many calls that perf buffer overflows
 i guess this is normal ill try to possibly filter systemcalls further
 also we must use a qthread to work with the ui cuz we got a crash
+
+
+### LAG
+we will fix the lag
+main issues are 
+syscall rate (so fucking many)
+textedit.append (expesnive)
+50ms timer (drain the queue and add hundreds of lines)
+
+we will rate limit, and batch ui updates
+
+## SYSTEM CALLS WORK!
+finally after so much work system calls log 
+with litterally no detail tho so we'll work on that
+lag still exists
+we will haveto work on that

@@ -54,6 +54,10 @@ class SysTracer:
         )
 
         self.syscall_table = load_syscall_table()
+ 
+        self._last_emit = 0.0 #really wanna avoid lag so we w ill rate limit
+        self._emit_interval = 0.01  #100 events per sec max per pid
+
     def set_filter(self, name, val):
         self.filters[name] = val
 
@@ -71,6 +75,12 @@ class SysTracer:
 
     def _on_event(self, cpu, data, size):
         try:
+            now = time.time() #ratelimit
+            if now - self._last_emit < self._emit_interval:
+                return
+            self._last_emit = now
+
+
             evt = self.bpf["events"].event(data)
             if evt.pid != self.pid: #only for our pid
                 return
@@ -83,7 +93,7 @@ class SysTracer:
             sc = SysCall(
                 pid=evt.pid,
                 name=name,
-                timestamp=time.time()
+                timestamp=now
             )
 
             try:

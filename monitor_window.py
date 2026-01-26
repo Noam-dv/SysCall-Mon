@@ -40,7 +40,12 @@ class MonitorWindow(QMainWindow):
         root.addLayout(bar)
 
         #log view
-        log = QTextEdit()
+        log = QTextEdit() #this lags like a mf 
+
+        #potential fix for the lag with help from chatgpt
+        log._buffer = []
+        log._last_flush = time.time()
+
         log.setReadOnly(True)
         root.addWidget(log)
 
@@ -49,12 +54,20 @@ class MonitorWindow(QMainWindow):
 
     def add_event(self, evt: SysCall):
         pid = evt.pid
-        if pid not in self.sessions:
+        if pid not in self.sessions: #only our pids
             return
 
-        log, checkboxes, tracer = self.sessions[pid]
+        log,checkboxes,tracer = self.sessions[pid]
 
-        ts = datetime.fromtimestamp(evt.timestamp).strftime("%H:%M:%S.%f")[:-3]
-        line = f"[{ts}] {evt.name}"
-        log.append(line)
-        log.moveCursor(log.textCursor().MoveOperation.End)  #auto scroll
+        ts = datetime.fromtimestamp(evt.timestamp).strftime("%H:%M:%S.%f")[:-3] #format
+        log._buffer.append(f"[{ts}] {evt.name}")
+
+        #push to ui max 10 times per second
+        now = time.time()
+        if now - log._last_flush < 0.1:
+            return
+        log._last_flush = now
+        if log._buffer:
+            log.append("\n".join(log._buffer))
+            log._buffer.clear()
+            log.moveCursor(log.textCursor().MoveOperation.End)  #auto scroll
