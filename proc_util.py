@@ -52,13 +52,17 @@ class ProcessUtil:
     def _get_icon(self, p):
         #try to grab icon from gotten path
         #sometimes wont work but its fine
+
+        #im still learning to develop on linux
+        #tried to implement this better
         try:
-            exe = p.exe()
-            if exe and os.path.exists(exe):
-                return QIcon(exe)
+            name = p.name()
+            icon = QIcon.fromTheme(name.lower())
+            if not icon.isNull():
+                return icon
         except:
             pass
-        return None
+        return QIcon.fromTheme("application-x-executable") #fallback
 
     def get_cpu_percent(self, pid):
         #get cpu usage manually

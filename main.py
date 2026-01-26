@@ -99,13 +99,14 @@ class MonUI(QMainWindow):
         #table
         self.table = QTableWidget(0, 7)
         self.table.setHorizontalHeaderLabels([
-            "", "PID", "name", "user", "status", "cpu %", "memory (MB)"
+            "", "PID", "name", "user", "status", "cpu %", "memory (MB)" #first one is icon
         ])
         self.table.verticalHeader().setVisible(False)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.setColumnWidth(0, 24) #smaller column for icons
 
         root.addWidget(self.table)
 
@@ -113,6 +114,9 @@ class MonUI(QMainWindow):
         root.addWidget(self.status)
 
     def render(self, procs): #draw items
+        self.table.setSortingEnabled(False) #turn off sorting while populating the table
+        #not sure why sorting breaks it ?
+
         self.table.setRowCount(0)
         for p in procs:
             r = self.table.rowCount()
@@ -129,6 +133,8 @@ class MonUI(QMainWindow):
             self.table.setItem(r, 4, QTableWidgetItem(p.status or "NA"))
             self.table.setItem(r, 5, QTableWidgetItem("0.0"))
             self.table.setItem(r, 6, QTableWidgetItem(f"{p.mem:.1f}"))
+
+        self.table.setSortingEnabled(True) #add sorting click once for ascending twice for descending thanks qt :)
 
     def update_live(self, procs, util):
         #update cpu + mem only (no table rebuild)
