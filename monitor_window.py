@@ -29,12 +29,16 @@ class MonitorWindow(QMainWindow):
 
         self.setWindowTitle("syscall monitor")
         self.resize(800, 500)
-
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
 
         #pid: log, checkboxes, tracer
         self.sessions = {} #sessions of tracers
+
+        self.setWindowFlags(
+            Qt.WindowType.Window | Qt.WindowType.WindowMinimizeButtonHint | #no maxmimize button just to experiment
+            Qt.WindowType.WindowCloseButtonHint
+        )
 
     def open_process(self, pid, tracer):
         #dont open twice

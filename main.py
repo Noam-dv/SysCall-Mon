@@ -1,4 +1,5 @@
 import sys, os
+os.environ["QT_QPA_PLATFORM"] = "xcb" #idk why ths fixes the border buttons not working
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import Qt, QTimer
 from proc_util import ProcessUtil
@@ -96,7 +97,7 @@ class MonApp:
         #dont poll ALLLLLL 
         #do only 50 max  in one ui tick
         m = 50 #modify as u wish, risky tho
-        
+
         for pid, tracer in self.tracers.items():
             for i in range(m): #max events per tick
                 try:
@@ -112,6 +113,7 @@ class MonUI(QMainWindow):
         super().__init__()
         self.app = app
 
+        #main window setup
         self.setWindowTitle("sysmon")
         self.resize(1000, 520)
         self._build()

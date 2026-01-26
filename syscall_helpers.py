@@ -20,9 +20,8 @@ class SysType(Enum):
     SECURITY = "security" #things that change authority
     OTHER = "other"
 
-
 #load syscall categories from json
-def load_category_dict(path="syscall_categories.json"):
+def load_category_dict(path="!syscall_categories.json"):
     if not os.path.exists(path):
         raise FileNotFoundError(f"syscall category file doesnt exist: {path}")
 

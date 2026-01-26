@@ -82,6 +82,12 @@ todo: read more about ebpf understand better how it wokrs
 
 i have written the first demo of systracer, it creates a new ebpf program for each pid we shadow ( maybe a better way tro do this later)
 it will log the system calls of that pid, read them in real time and using the data we can parse (Which is kind of complicated to do) we trigger the event from the window to add to the screen
+the data of the event is passed with the perf buffer
+what is a perf buffer?
+perf buffer is a buffer in kernal space memory, that the kernal writes the event data to
+BCC (the inner workings of ebpf) requests to share thast memory with our process memory with mmap
+and basicaly the kernal maps the perf ring buffers memory to our virtual memory so we can access it and read it
+
 
 install with ```sudo apt install -y bpfcc-tools python3-bpfcc```
 run with ```sudo -E python3 main.py```
