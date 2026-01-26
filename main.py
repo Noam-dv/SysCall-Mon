@@ -4,6 +4,9 @@ from PyQt6.QtCore import Qt, QTimer
 from proc_util import ProcessUtil
 import psutil
 
+from sys_tracer import SysTracer
+from monitor_window import MonitorWindow
+
 
 class MonApp:
     def __init__(self):
@@ -15,12 +18,21 @@ class MonApp:
         self.ui = MonUI(self)
         self.ui.show()
 
+        #monitor window for syscall tracers
+        self.monitor = MonitorWindow()
+        self.monitor.show()
+        self.tracers = {} #pid: systracer
         self.refresh()
 
         #timer to update mem usage every second
         self.timer = QTimer()
         self.timer.timeout.connect(self.tick)
         self.timer.start(1000)
+
+        #timer to get syscall tracer queues next to not have overflow
+        self.trace_timer = QTimer()
+        self.trace_timer.timeout.connect(self.poll_tracers)
+        self.trace_timer.start(50) #not toooo fast
 
     def refresh(self):
         self.ui.set_status("loading processes")
@@ -60,9 +72,32 @@ class MonApp:
         if not sel:
             self.ui.set_status("nothing selected")
             return
+
         #small print for syscall tracer later
         print("TRACE:", sel)
+
+        for pid, name in sel:
+            if pid in self.tracers:
+                continue  #already tracing
+
+            tracer = SysTracer(pid)
+            tracer.start()
+
+            self.tracers[pid] = tracer
+            self.monitor.open_process(pid, tracer)
+
         self.ui.set_status(f"will trace {len(sel)} processes")
+
+    def poll_tracers(self):
+        #pull events from tracer queues
+        #THIS is the safe boundary between bcc threads and qt
+        for pid, tracer in self.tracers.items():
+            while True:
+                try:
+                    evt = tracer.events.get_nowait()
+                    self.monitor.add_event(evt)
+                except:
+                    break
 
 
 #small ui class (messy js for testing for now)

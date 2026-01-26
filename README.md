@@ -80,3 +80,22 @@ todo: read more about ebpf understand better how it wokrs
 
 i have written the first demo of systracer, it creates a new ebpf program for each pid we shadow ( maybe a better way tro do this later)
 it will log the system calls of that pid, read them in real time and using the data we can parse (Which is kind of complicated to do) we trigger the event from the window to add to the screen
+
+install with ```sudo apt install -y bpfcc-tools python3-bpfcc```
+run with ```sudo -E python3 main.py```
+-E keeps the environment making sure u dont need  to downlaod all ur pip packages all over again
+
+after extendning this it works! i tried to trace pythonj and got about a billion write syscalls displayed
+### the log:
+noam@noam-VirtualBox:~/sysmon$ sudo -E python3 main.py\n
+....
+tracing pid 6978
+Possibly lost 226 samples
+...
+Possibly lost 315 samples
+QBasicTimer::start: QBasicTimer can only be used with threads started with QThread
+Segmentation fault
+
+theres so many calls that perf buffer overflows
+i guess this is normal ill try to possibly filter systemcalls further
+also we must use a qthread to work with the ui cuz we got a crash
