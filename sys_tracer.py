@@ -12,7 +12,7 @@ class SysCall:
     pid: int
     name: str
     timestamp: float
-
+    event_type: SysType.OTHER
 
 #MOVED TO SYSCALL_HELPERS.PY
 #basic important syscall categories
@@ -79,10 +79,12 @@ class SysTracer:
 
             if not name:
                 name = f"sys_{evt.id}" #format correctly
+
             sc = SysCall(
                 pid=evt.pid,
                 name=name,
-                timestamp=now
+                timestamp=now,
+                event_type=syscall_category(name) #pass category for display
             )
 
             try:

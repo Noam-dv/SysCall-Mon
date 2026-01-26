@@ -1,0 +1,117 @@
+{
+  "file": [
+    "open",
+    "read",
+    "write",
+    "close",
+    "pread",
+    "pwrite",
+    "lseek",
+    "fsync",
+    "fdatasync"
+  ],
+
+  "fs_meta": [
+    "stat",
+    "lstat",
+    "fstat",
+    "statx",
+    "access",
+    "chmod",
+    "chown",
+    "unlink",
+    "rename",
+    "mkdir",
+    "rmdir",
+    "link",
+    "symlink",
+    "readlink",
+    "mount",
+    "umount"
+  ],
+
+  "process": [
+    "fork",
+    "vfork",
+    "clone",
+    "exec",
+    "exit",
+    "wait",
+    "kill",
+    "tgkill",
+    "setpgid",
+    "getpid"
+  ],
+
+  "memory": [
+    "mmap",
+    "munmap",
+    "mprotect",
+    "brk",
+    "mremap",
+    "mlock",
+    "munlock"
+  ],
+
+  "ipc": [
+    "pipe",
+    "pipe2",
+    "socketpair",
+    "shmget",
+    "shmat",
+    "shmdt",
+    "shmctl",
+    "msgget",
+    "msgsnd",
+    "msgrcv",
+    "semget",
+    "semop"
+  ],
+
+  "network": [
+    "socket",
+    "bind",
+    "connect",
+    "accept",
+    "send",
+    "recv",
+    "sendto",
+    "recvfrom",
+    "sendmsg",
+    "recvmsg"
+  ],
+
+  "events": [
+    "epoll",
+    "poll",
+    "ppoll",
+    "select",
+    "pselect",
+    "inotify",
+    "fanotify",
+    "signalfd",
+    "eventfd"
+  ],
+
+  "time": [
+    "nanosleep",
+    "clock_gettime",
+    "clock_nanosleep",
+    "timer_create",
+    "timer_settime",
+    "gettimeofday",
+    "setitimer"
+  ],
+
+  "security": [
+    "setuid",
+    "setgid",
+    "geteuid",
+    "getegid",
+    "setresuid",
+    "capset",
+    "capget",
+    "prctl",
+    "seccomp"
+  ]
+}
