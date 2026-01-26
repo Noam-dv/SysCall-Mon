@@ -8,7 +8,8 @@ struct syscall_evt { //event we send to user space
 };
 
 BPF_PERF_OUTPUT(events); //perf buffer
-RAW_TRACEPOINT_PROBE(sys_enter) //raw tracepoint avoids struct mismatch shit
+//perf buffer is efficient way to transfer huge amoutns of events 
+RAW_TRACEPOINT_PROBE(sys_enter)
 {
     struct syscall_evt evt = {};
     u64 pid_tgid = bpf_get_current_pid_tgid();

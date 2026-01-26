@@ -5,7 +5,7 @@ import queue
 #linux only
 #run as root
 from dataclasses import dataclass
-from syscall_table import load_syscall_table
+from syscall_helpers import *
 
 @dataclass
 class SysCall:
@@ -14,15 +14,16 @@ class SysCall:
     timestamp: float
 
 
+#MOVED TO SYSCALL_HELPERS.PY
 #basic important syscall categories
 #will be able to modify in the future
-FILE_IO = {"open", "openat", "read", "write", "close", "stat", "lstat"}
-NETWORK = {
-    "socket", "connect", "accept",
-    "sendto", "recvfrom", "sendmsg", "recvmsg"
-}
-PROCESS = {"fork", "vfork", "clone", "execve", "exit"}
-MEMORY = {"mmap", "munmap", "brk"}
+#FILE_IO = {"open", "openat", "read", "write", "close", "stat", "lstat"}
+#NETWORK = {
+#    "socket", "connect", "accept",
+#    "sendto", "recvfrom", "sendmsg", "recvmsg"
+#}
+#PROCESS = {"fork", "vfork", "clone", "execve", "exit"}
+#MEMORY = {"mmap", "munmap", "brk"}
 
 
 class SysTracer:
@@ -60,18 +61,6 @@ class SysTracer:
 
     def set_filter(self, name, val):
         self.filters[name] = val
-
-    def _filter(self, name):
-        #decide if syscall should be shown
-        if name in FILE_IO:
-            return self.filters["file"]
-        if name in NETWORK:
-            return self.filters["net"]
-        if name in PROCESS:
-            return self.filters["proc"]
-        if name in MEMORY:
-            return self.filters["mem"]
-        return self.filters["other"]
 
     def _on_event(self, cpu, data, size):
         try:
