@@ -1,3 +1,4 @@
+## logging ideas:
 First main issue:
 Threads conflicting - tkinter, then pyside6 all use a main thread and therefore i had DEBUG errors due to library specific threading needed
 
@@ -51,3 +52,11 @@ Starting from scratch: on ubuntu linux
 linux has much less OS constraints, and has stuff such as strace that show that this is possible
 i will move this project from linux, adn start from scratch (Even UI)
 first new linux commit will be the simple UI with process data (icons, pids, mem and other shit maybe)
+
+## LINUX COMMIT #1
+made basic UI, used psutil to make helper functions
+list basic processes, try to get icon (logic better in the future)
+moved to PyQt6 heard it might be better ?
+made some new UI 
+tried to organize my code slightly better and document it a bit more
+
