@@ -1,4 +1,10 @@
-## logging ideas:
+## demo
+https://github.com/Noam-dv/SysCall-Mon/raw/refs/heads/main/!video.webm
+
+
+## below is just my thought process
+
+#### logging ideas:
 First main issue:
 Threads conflicting - tkinter, then pyside6 all use a main thread and therefore i had DEBUG errors due to library specific threading needed
 
