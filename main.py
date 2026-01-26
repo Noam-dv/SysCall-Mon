@@ -2,6 +2,7 @@ import sys, os
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import Qt, QTimer
 from proc_util import ProcessUtil
+import psutil
 
 
 class MonApp:
@@ -44,7 +45,14 @@ class MonApp:
         self.ui.render(self.filtered)
 
     def tick(self):
-        #update memory + cpu live (no full refresh)
+        #update memory and cpu
+        for p in self.filtered:
+            try:
+                proc = psutil.Process(p.pid)
+                p.mem = self.proc._get_mem_mb(proc)
+            except:
+                pass
+
         self.ui.update_live(self.filtered, self.proc)
 
     def trace_selected(self):
@@ -131,25 +139,37 @@ class MonUI(QMainWindow):
             self.table.setItem(r, 2, QTableWidgetItem(p.name))
             self.table.setItem(r, 3, QTableWidgetItem(p.user or "NA"))
             self.table.setItem(r, 4, QTableWidgetItem(p.status or "NA"))
-            self.table.setItem(r, 5, QTableWidgetItem("0.0"))
-            self.table.setItem(r, 6, QTableWidgetItem(f"{p.mem:.1f}"))
+
+            cpu_item = QTableWidgetItem()
+            cpu_item.setData(Qt.ItemDataRole.EditRole, 0.0)
+
+            mem_item = QTableWidgetItem()
+            mem_item.setData(Qt.ItemDataRole.EditRole, p.mem)
+
+            self.table.setItem(r, 5, cpu_item)
+            self.table.setItem(r, 6, mem_item)
 
         self.table.setSortingEnabled(True) #add sorting click once for ascending twice for descending thanks qt :)
         self.table.sortItems(6, Qt.SortOrder.DescendingOrder) #sort by memory
-        
+
     def update_live(self, procs, util):
-        #update cpu + mem only (no table rebuild)
+        #update cpu and mem 
+        #without rebuilding table
+        self.table.setSortingEnabled(False)
+
         for r in range(self.table.rowCount()):
             try:
                 pid = int(self.table.item(r, 1).text())
                 for p in procs:
                     if p.pid == pid:
                         cpu = util.get_cpu_percent(pid)
-                        self.table.item(r, 5).setText(f"{cpu:.1f}")
-                        self.table.item(r, 6).setText(f"{p.mem:.1f}")
+                        self.table.item(r, 5).setData(Qt.ItemDataRole.EditRole, cpu)
+                        self.table.item(r, 6).setData(Qt.ItemDataRole.EditRole, p.mem)
                         break
             except:
                 pass
+
+        self.table.setSortingEnabled(True)
 
     def get_selected(self): 
         rows=[] #small list then turn to set to remove dupes
