@@ -46,3 +46,8 @@ vpn drivers hook into it
 networking stack hooks into it
 edr hooks into it
 you cannot “share” it.
+
+Starting from scratch: on ubuntu linux
+linux has much less OS constraints, and has stuff such as strace that show that this is possible
+i will move this project from linux, adn start from scratch (Even UI)
+first new linux commit will be the simple UI with process data (icons, pids, mem and other shit maybe)
