@@ -65,3 +65,18 @@ added simple sorting
 implemented more sturdy icon fetching logic cuz that really pissed me off that it was spamming the default icon
 next we will start working on the systracer logic 
 hopefully its easier on linux
+
+## Sys call tracing starting
+i first thought of using ptrace, but after reading a bit more i saw that a mor manual approach would be to use eBPF 
+ill read about it a bit now
+
+after reading i understand like in windows etw there will be TONS of clutter of system calls 
+we will filter by type, similar to how i think procmon does it 
+FILE IO, NETWORK, PROCESS categorys will be shown
+rest will be ignored
+maybe ill make a long long long list of all calls and let u enable basd on presets and enable manually? we will see 
+
+todo: read more about ebpf understand better how it wokrs
+
+i have written the first demo of systracer, it creates a new ebpf program for each pid we shadow ( maybe a better way tro do this later)
+it will log the system calls of that pid, read them in real time and using the data we can parse (Which is kind of complicated to do) we trigger the event from the window to add to the screen
