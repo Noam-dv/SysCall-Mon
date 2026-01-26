@@ -26,7 +26,7 @@ this could be due to several reasons, but i think in my case its conflicting ses
 after adding dynamic session name swe get the same result
 im thinking we might be using outdated pywintrace usage ( i took code from example uses)
 
-PROGRESS !!
+progress: 
 after using DNS provider whcih is a user mode provider
 events did fire so we know its not hte logic its more so permission issues or provider issues?
 maybe im using dated providers
@@ -87,8 +87,8 @@ install with ```sudo apt install -y bpfcc-tools python3-bpfcc```
 run with ```sudo -E python3 main.py```
 -E keeps the environment making sure u dont need  to downlaod all ur pip packages all over again
 
-after extendning this it works! i tried to trace pythonj and got about a billion write syscalls displayed
-### the log:
+after extendning this it works! i tried to trace python and got about a billion write syscalls displayed
+### log:
 ```
 noam@noam-VirtualBox:~/sysmon$ sudo -E python3 main.py\n
 ....
@@ -113,7 +113,7 @@ textedit.append (expesnive)
 
 we will rate limit, and batch ui updates
 
-## SYSTEM CALLS WORK!
+## working system calls
 finally after so much work system calls log 
 with litterally no detail tho so we'll work on that
 lag still exists
