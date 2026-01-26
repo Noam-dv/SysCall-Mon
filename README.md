@@ -134,6 +134,6 @@ first we have to define what an anomaly is (brackets are how suspicious this is)
 - process suddenly shifts from file heavy to net heavy (5)
 - new behavior (brand new syscall that was never seen in this process) (3)
 
-After reading a bit more i like the statistical behavior modeling approach much more
+After reading a bit more i like the *statistical behavior modeling* approach much more
 i will read about it more, but implement it later once i fix the lag 
 cuz it still lags a LOT
