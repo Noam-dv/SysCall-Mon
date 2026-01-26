@@ -27,7 +27,7 @@ TRACEPOINT_PROBE(raw_syscalls, sys_enter) // tracepoint is just the callback for
     evt.id  = args->id; //syscall id 
     //later we map the id to the name in syscall_helpers
 
-    #pragma unroll //raw syscall args
+    #pragma unroll //unroll loop like inline just for ebpf verifier
     for (int i = 0; i < 6; i++) {
         evt.args[i] = args->args[i];
     }
