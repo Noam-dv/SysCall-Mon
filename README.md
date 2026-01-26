@@ -27,77 +27,130 @@ monitoring: [(11452, 'Notepad.exe')]
 ```
 
 as you can see above, etw instance automatically closes.
+
 this could be due to several reasons, but i think in my case its conflicting session names
 
+
 after adding dynamic session name swe get the same result
+
 im thinking we might be using outdated pywintrace usage ( i took code from example uses)
 
 progress: 
+
 after using DNS provider whcih is a user mode provider
+
 events did fire so we know its not hte logic its more so permission issues or provider issues?
+
 maybe im using dated providers
+
 many network events (tcp ip events) arent working supposedly cuz i have expressvpn installed but ive never used it lol
+
 ??
+
 vpn might be an issue i will add a warning if you enable network events 
 
+
 looks like i ran into a real OS boundary
+
 etw is simply not gonna be enough for system call tracing 
+
 procmon uses private kernal tracing and is windows signed
 
+
 after checking i can see i am elevated and have real admin perms 
+
 idk why kernel providers are blocked
 
+
 this project no longer seems realistic
+
 one kernal tracer can be alive at once, and my anti virus is using it 
+
 in practice:
+
 only one kernel tracing session can be active ,windows already uses it, defender already owns it
+
 vpn drivers hook into it
+
 networking stack hooks into it
+
 edr hooks into it
+
 you cannot “share” it.
 
-Starting from scratch: on ubuntu linux
+
+#### Starting from scratch: on ubuntu linux
+
 linux has much less OS constraints, and has stuff such as strace that show that this is possible
+
 i will move this project from linux, adn start from scratch (Even UI)
+
+
 first new linux commit will be the simple UI with process data (icons, pids, mem and other shit maybe)
 
 ## LINUX COMMIT #1
+
 made basic UI, used psutil to make helper functions
+
 list basic processes, try to get icon (logic better in the future)
+
 moved to PyQt6 heard it might be better ?
+
 made some new UI 
+
 tried to organize my code slightly better and document it a bit more
+
 
 ## LINUX COMMIT #2 AND #3
 added simple sorting 
+
 implemented more sturdy icon fetching logic cuz that really pissed me off that it was spamming the default icon
+
 next we will start working on the systracer logic 
+
 hopefully its easier on linux
 
 ## Sys call tracing starting
 i first thought of using ptrace, but after reading a bit more i saw that a mor manual approach would be to use eBPF 
+
 ill read about it a bit now
 
+
 after reading i understand like in windows etw there will be TONS of clutter of system calls 
+
 we will filter by type, similar to how i think procmon does it 
+
 FILE IO, NETWORK, PROCESS categorys will be shown
+
 rest will be ignored
+
 maybe ill make a long long long list of all calls and let u enable basd on presets and enable manually? we will see 
+
 
 todo: read more about ebpf understand better how it wokrs
 
-i have written the first demo of systracer, it creates a new ebpf program for each pid we shadow ( maybe a better way tro do this later)
+i have written the first demo of systracer, it creates a new ebpf program for each pid we shadow
+( maybe a better way tro do this later)
+
 it will log the system calls of that pid, read them in real time and using the data we can parse (Which is kind of complicated to do) we trigger the event from the window to add to the screen
+
 the data of the event is passed with the perf buffer
+
 what is a perf buffer?
+
 perf buffer is a buffer in kernal space memory, that the kernal writes the event data to
+
 BCC (the inner workings of ebpf) requests to share thast memory with our process memory with mmap
+
 and basicaly the kernal maps the perf ring buffers memory to our virtual memory so we can access it and read it
 
 
 install with ```sudo apt install -y bpfcc-tools python3-bpfcc```
+
 run with ```sudo -E python3 main.py```
+
 -E keeps the environment making sure u dont need  to downlaod all ur pip packages all over again
+
 
 after extendning this it works! i tried to trace python and got about a billion write syscalls displayed
 ### log:
@@ -118,30 +171,42 @@ also we must use a qthread to work with the ui cuz we got a crash
 
 ### LAG
 we will fix the lag
+
 main issues are 
+
 syscall rate (so fucking many)
+
 textedit.append (expesnive)
+
 50ms timer (drain the queue and add hundreds of lines)
+
 
 we will rate limit, and batch ui updates
 
 
 after doing this it still lags
+
 the ui thread is doing too much work: inserting new rows, the html coloring, etc
 
 QTextEdit -> QPlainTextEdit shoulod be more optimized
 
 ## working system calls
 finally after so much work system calls log 
+
 with litterally no detail tho so we'll work on that
+
 lag still exists
+
 we will have to work on that
 
 
 ## passing args
 added args to the evt struct in the c file
+
 i now pass raw args and have the args of each syscall mapped out in ```!syscall_signatures.json```
+
 also wrote a helper function that gets the name of a syscall and the raw args and returns a dict of each argname with its value
+
 for better printing 
 
 
