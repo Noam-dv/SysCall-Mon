@@ -118,3 +118,18 @@ finally after so much work system calls log
 with litterally no detail tho so we'll work on that
 lag still exists
 we will haveto work on that
+
+
+## anomaly detection
+now the system tracer is kind of done (not really but for now its good to start on the main thing)
+
+i would really like to implement anomaly detection
+
+suspicious rate - 0-10
+
+first we have to define what an anomaly is (brackets are how suspicious this is):
+- sudden spikes in syscalls (5)
+- sudden spike in a specific call , like a lot of the same call (6)
+- syscall order that does not happen in base line (3 could happend cuz of dropped syscalls)
+- process suddenly shifts from file heavy to net heavy (5)
+- new behavior (brand new syscall that was never seen in this process) (3)
