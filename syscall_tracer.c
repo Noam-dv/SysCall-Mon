@@ -1,5 +1,9 @@
 //ebpf program
 //runs in kernel
+
+//HEAVILY commented just to help me remember too cuz tihs looks way more complex than it is
+
+
 #include <uapi/linux/ptrace.h>
 #include <linux/sched.h> 
 
@@ -13,7 +17,8 @@ BPF_PERF_OUTPUT(events); //perf buffer
 //perf buffer is efficient way to transfer huge amoutns of events 
 //uses shared memory between kernel and process to quickly let it write and let us read 
 
-TRACEPOINT_PROBE(raw_syscalls, sys_enter)
+TRACEPOINT_PROBE(raw_syscalls, sys_enter) // tracepoint is just the callback for when something happens in the kernal
+//ebpf just so happens to have sys_enter callback which lets us have an event callback for each syscall
 {
     struct syscall_evt evt = {};
     u64 pid_tgid = bpf_get_current_pid_tgid();
