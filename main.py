@@ -153,7 +153,8 @@ class MonUI(QMainWindow):
         ])
         self.table.verticalHeader().setVisible(False)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-        self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection) #disable multi process selection cuz
+        #tracking more than one process is too laggy 
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.horizontalHeader().setStretchLastSection(True)
         self.table.setColumnWidth(0, 24) #smaller column for icons

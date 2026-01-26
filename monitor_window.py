@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import *
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from datetime import datetime
 import time
 
@@ -9,8 +9,9 @@ from syscall_helpers import syscall_category, SysType
 #very simple monitor window with tabs
 #todo : make selectable system call categorys to trace 
 # also make tabs yelloow and red if anomolys detected  but thats much later
-
-SYSCALL_COLORS = { #map colors
+ 
+SYSCALL_COLORS = { #map colors 
+    #unused rn cuz we wanna prevent lag but i want to implement this
     SysType.FILE_IO: "#4fc3f7", #blue
     SysType.FS_META: "#64b5f6", #light blue
     SysType.PROCESS: "#ffb74d", #orange
@@ -23,6 +24,12 @@ SYSCALL_COLORS = { #map colors
     SysType.OTHER: "#b0bec5", #fallback gray
 }
 
+MAX_LINES = 5000 #hard cap log to prevent crashes
+FLUSH_INTERVAL_MS = 200 #ui push rate 
+#200ms = 0.2s
+#30*0.2 = 6
+#once every 6 ish frames
+
 class MonitorWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -34,11 +41,20 @@ class MonitorWindow(QMainWindow):
 
         #pid: log, checkboxes, tracer
         self.sessions = {} #sessions of tracers
+        #multi pid tracking is implemented
+        #but i disabled it on the ui end because it currently lags too much
+
 
         self.setWindowFlags(
-            Qt.WindowType.Window | Qt.WindowType.WindowMinimizeButtonHint | #no maxmimize button just to experiment
+            Qt.WindowType.Window |
+            Qt.WindowType.WindowMinimizeButtonHint | #no maxmimize button just to experiment
             Qt.WindowType.WindowCloseButtonHint
         )
+
+        # global ui flush timer
+        self.flush_timer = QTimer(self)
+        self.flush_timer.timeout.connect(self._flush_all)
+        self.flush_timer.start(FLUSH_INTERVAL_MS)
 
     def open_process(self, pid, tracer):
         #dont open twice
@@ -64,16 +80,21 @@ class MonitorWindow(QMainWindow):
             bar.addWidget(cb)
 
         bar.addStretch()
+
+        clear_btn = QPushButton("Clear")
+        clear_btn.clicked.connect(lambda: self._clear_log(pid))
+        bar.addWidget(clear_btn)
+
         root.addLayout(bar)
 
         #log view
-        log = QTextEdit() #this lags like a mf 
+        log = QPlainTextEdit() #this lags like a mf 
+        log.setReadOnly(True)
 
         #potential fix for the lag with help from chatgpt
         log._buffer = []
-        log._last_flush = time.time()
+        log._pending_lines = 0
 
-        log.setReadOnly(True)
         root.addWidget(log)
 
         self.tabs.addTab(w, f"PID {pid}")
@@ -82,6 +103,17 @@ class MonitorWindow(QMainWindow):
             "checks": checks,
             "tracer": tracer,
         }
+
+    def closeEvent(self, event):
+        #when monitor window closes
+        #stop all syscall tracers
+        for pid, session in self.sessions.items():
+            tracer = session.get("tracer")
+            if tracer:
+                tracer.stop()
+
+        self.sessions.clear()
+        event.accept()
 
     def _on_filter_changed(self, state):
         #called when any checkbox changes
@@ -112,24 +144,37 @@ class MonitorWindow(QMainWindow):
             return
 
         ts = datetime.fromtimestamp(evt.timestamp).strftime("%H:%M:%S.%f")[:-3]
-        color = SYSCALL_COLORS.get(category, "#b0bec5")
 
-        line = ( #append the coloring format
-            f'<span style="color:gray">[{ts}]</span> '
-            f'<span style="color:{color}; font-weight:bold">'
-            f'[{category.name}]</span> '
-            f'<span style="color:white">{evt.name}</span>'
-        )
+        # plain text line (color handled by simplicity + speed)
+        line = f"[{ts}] [{category.name}] {evt.name} ({evt.args})"
 
         log._buffer.append(line)
 
-        #push to ui max 10 times per second
-        now = time.time()
-        if now - log._last_flush < 0.1:
+    def _flush_all(self):
+        for session in self.sessions.values():
+            self._flush_log(session["log"])
+
+    def _flush_log(self, log: QPlainTextEdit):
+        if not log._buffer:
             return
 
-        log._last_flush = now
-        if log._buffer:
-            log.insertHtml("<br>".join(log._buffer) + "<br>")
-            log._buffer.clear()
-            log.moveCursor(log.textCursor().MoveOperation.End)  #auto scroll
+        log.appendPlainText("\n".join(log._buffer))
+        log._pending_lines += len(log._buffer)
+        log._buffer.clear()
+
+       
+        if log.blockCount() > MAX_LINES: #delete from the top when exceeding limit
+            cursor = log.textCursor()
+            cursor.movePosition(cursor.MoveOperation.Start)
+            for i in range(log.blockCount() - MAX_LINES):
+                cursor.select(cursor.SelectionType.BlockUnderCursor)
+                cursor.removeSelectedText()
+                cursor.deleteChar()
+        log.moveCursor(log.textCursor().MoveOperation.End)
+
+    def _clear_log(self, pid):
+        if pid not in self.sessions:
+            return
+        log = self.sessions[pid]["log"]
+        log.clear()
+        log._buffer.clear()#clear buffer to reset next logs

@@ -7,6 +7,7 @@ from enum import Enum
 #syscall table loader
 #syscall categorization
 #categories from json so this isnt hardcoded shit
+#args from json
 
 class SysType(Enum):
     FILE_IO = "file" #actual data read write to files
@@ -60,6 +61,29 @@ def syscall_category(name:str) -> SysType:
 #    if name in PROCESS: return SysType.PROCESS
 #    if name in MEMORY: return SysType.MEMORY
 #    return SysType.OTHER
+
+
+#parse raw syscall args into named args based on teh json
+def load_syscall_signatures(path="!syscall_signatures.json"):
+    if not os.path.exists(path):
+        return {}
+    with open(path, "r") as f:
+        return json.load(f)
+
+SIGNATURES = load_syscall_signatures()
+
+
+def parse_syscall_args(name:str, args:tuple): #maps syscal name and raw args
+    #maps to a readable dict  { argname: argval }
+    sig = SIGNATURES.get(name)
+    if not sig:#no args
+        return None
+    parsed={}
+    for i, arg in enumerate(sig):
+        if i >= len(args):
+            break #undefined arg ig?
+        parsed[arg] = args[i]
+    return parsed
 
 
 def load_syscall_table(): #syscall table will be done manually

@@ -125,11 +125,25 @@ textedit.append (expesnive)
 
 we will rate limit, and batch ui updates
 
+
+after doing this it still lags
+the ui thread is doing too much work: inserting new rows, the html coloring, etc
+
+QTextEdit -> QPlainTextEdit shoulod be more optimized
+
 ## working system calls
 finally after so much work system calls log 
 with litterally no detail tho so we'll work on that
 lag still exists
-we will haveto work on that
+we will have to work on that
+
+
+## passing args
+added args to the evt struct in the c file
+i now pass raw args and have the args of each syscall mapped out in ```!syscall_signatures.json```
+also wrote a helper function that gets the name of a syscall and the raw args and returns a dict of each argname with its value
+for better printing 
+
 
 ## categorization
 

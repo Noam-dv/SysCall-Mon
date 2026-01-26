@@ -12,6 +12,7 @@ class SysCall:
     pid: int
     name: str
     timestamp: float
+    args: dict
     event_type: SysType.OTHER
 
 #MOVED TO SYSCALL_HELPERS.PY
@@ -69,22 +70,25 @@ class SysTracer:
                 return
             self._last_emit = now
 
-
             evt = self.bpf["events"].event(data)
             if evt.pid != self.pid: #only for our pid
                 return
                  
-            name = self.syscall_table.get(evt.id) #get the name from 
-            #our tabvle that we generate in syscall_table
-
+            name = self.syscall_table.get(evt.id)
             if not name:
-                name = f"sys_{evt.id}" #format correctly
+                name = f"sys_{evt.id}"
+
+            raw_args = tuple(evt.args)
+
+            #parse syscall args using helper
+            parsed_args = parse_syscall_args(name, raw_args)
 
             sc = SysCall(
                 pid=evt.pid,
                 name=name,
                 timestamp=now,
-                event_type=syscall_category(name) #pass category for display
+                args=parsed_args,
+                event_type=syscall_category(name)
             )
 
             try:
@@ -109,5 +113,10 @@ class SysTracer:
                 self.bpf.perf_buffer_poll(timeout=100)
             except:
                 pass
+
     def stop(self):
         self.running = False
+        try:
+            self.bpf.cleanup() #detach and free perf bufefrs
+        except:
+            pass
