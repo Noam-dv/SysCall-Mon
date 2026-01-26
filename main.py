@@ -135,7 +135,8 @@ class MonUI(QMainWindow):
             self.table.setItem(r, 6, QTableWidgetItem(f"{p.mem:.1f}"))
 
         self.table.setSortingEnabled(True) #add sorting click once for ascending twice for descending thanks qt :)
-
+        self.table.sortItems(6, Qt.SortOrder.DescendingOrder) #sort by memory
+        
     def update_live(self, procs, util):
         #update cpu + mem only (no table rebuild)
         for r in range(self.table.rowCount()):

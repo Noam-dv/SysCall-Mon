@@ -18,7 +18,10 @@ class ProcessData:
 class ProcessUtil:
     def __init__(self):
         self._last_cpu_check = {} #pid: (cpu_time, timestamp)
-
+        self._gio_ok = False # i guess we can utilize the dumbness of me making a util process instantiable
+        self._gio = None
+        self._icon_cache = {}
+        
     #get all running processes
     #main entry point
     def get_all(self):
@@ -49,48 +52,63 @@ class ProcessUtil:
         except:
             return 0.0
 
-    def _get_icon(self, p):
-
+    def _init_gio(self): 
+        if self._gio_ok:
+            return
         try:
-            name = p.name()
-            icon = QIcon.fromTheme(name.lower())
-            if not icon.isNull():
-                return icon
+            import gi #moved here to not import every time we get icon 
+            #which is per process 
+            gi.require_version("Gio", "2.0")
+            from gi.repository import Gio
+            self._gio = Gio
+            self._gio_ok = True
         except:
-            pass
-        return QIcon.fromTheme("application-x-executable") #fallback
+            self._gio_ok = False
 
-    def _get_icon(self, p): #officially can no longer work on windows i believe
+
+    def _get_icon(self, p):
         #try to grab icon from gotten path
         #sometimes wont work but its fine
 
         #im still learning to develop on linux
         #tried to implement this better
-        try:
-            import gi #import on runtime
-            gi.require_version("Gio","2.0")
-            from gi.repository import Gio
-            
-            exe = p.exe()
-            app = Gio.AppInfo.get_default_for_type("application/x-executable", False)
-            name = os.path.basename(exe) #try finding by executable name
-            for a in Gio.AppInfo.get_all(): #more efficient icon finding
-                try:
-                    if name.lower() in a.get_executable().lower():
-                        icon = a.get_icon()
-                        if icon:
-                            return QIcon.fromTheme(icon.to_string())
-                except:
-                    pass
-        except:
-            pass
-        try:
-            icon = QIcon.fromTheme(p.name().lower()) #qt theme icon (i wanna implement themes later)
-            if not icon.isNull():
-                return icon
-        except:
-            pass
-        return QIcon.fromTheme("application-x-executable") #default icon
+        
+        name = p.name()
+        #cache
+        if name in self._icon_cache:
+            return self._icon_cache[name]
+        icon = None
+
+        #try gio desktop app icons first
+        self._init_gio()
+        if self._gio_ok:
+            try:
+                exe = p.exe()
+                base = os.path.basename(exe) #try finding by executable name
+                for a in self._gio.AppInfo.get_all(): #more efficient icon finding
+                    try:
+                        if base.lower() in a.get_executable().lower():
+                            gicon = a.get_icon()
+                            if gicon:
+                                icon = QIcon.fromTheme(gicon.to_string())
+                                break
+                    except:
+                        pass
+            except:
+                pass
+
+        #qt theme icon fallback
+        if not icon or icon.isNull():
+            try:
+                icon = QIcon.fromTheme(name.lower()) #qt theme icon (i wanna implement themes later)
+            except:
+                pass
+
+        if not icon or icon.isNull(): #last fallback
+            icon = QIcon.fromTheme("application-x-executable") #default icon
+
+        self._icon_cache[name] = icon
+        return icon
 
     def get_cpu_percent(self, pid): 
         #get cpu usage manually
