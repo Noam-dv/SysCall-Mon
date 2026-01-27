@@ -68,16 +68,18 @@ class MonApp:
 
         self.ui.update_live(self.filtered, self.proc)
 
+    def _monitor_closed(self):
+        self.monitor=None
+        
     def trace_selected(self):
         sel = self.ui.get_selected()
         if not sel:
             self.ui.set_status("nothing selected")
             return
 
-        if self.monitor is None: #move here so monitor window
-        #only opens when we start tracing
-
-            self.monitor = MonitorWindow()
+        if self.monitor is None:
+            #only opens if we dont have a window open
+            self.monitor = MonitorWindow(on_close=self._monitor_closed)
             self.monitor.show()
 
         for pid, name in sel:

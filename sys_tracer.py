@@ -110,7 +110,7 @@ class SysTracer:
         #poll perf buffer
         while self.running:
             try:
-                self.bpf.perf_buffer_poll(timeout=100)
+                self.bpf.perf_buffer_poll(timeout=500)
             except:
                 pass
 

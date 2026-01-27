@@ -31,13 +31,14 @@ push_interval = 200 #ui push rate
 #once every 6 ish frames
 
 class MonitorWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self,on_close=None):
         super().__init__()
 
         self.setWindowTitle("syscall monitor")
         self.resize(800, 500)
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
+        self._on_close = on_close #make monitor none in main.py so u can close and reopen
 
         #pid: {log, checkboxes, tracer}
         self.sessions = {} #sessions of tracers
@@ -122,6 +123,8 @@ class MonitorWindow(QMainWindow):
                 tracer.stop()
 
         self.sessions.clear()
+        if self._on_close: 
+            self._on_close()
         event.accept()
 
     def _on_filter_changed(self, state):
@@ -165,6 +168,9 @@ class MonitorWindow(QMainWindow):
         if not log._buffer:
             return
 
+        sb = log.verticalScrollBar()
+        at_bottom = (sb.value()==sb.maximum()) #if the scrollbar at the bottom thennnn we move with the logs
+
         cursor = log.textCursor()
         cursor.movePosition(cursor.MoveOperation.End)
 
@@ -181,7 +187,7 @@ class MonitorWindow(QMainWindow):
         #delete from the top when exceeding limit
         #only runs every flush so it doesnt lag
         l = log.blockCount()
-        if  l > max_lines: 
+        if l > max_lines:
             cursor = log.textCursor()
             cursor.movePosition(cursor.MoveOperation.Start)
             for i in range(l - max_lines):
@@ -189,7 +195,8 @@ class MonitorWindow(QMainWindow):
                 cursor.removeSelectedText()
                 cursor.deleteChar()
 
-        log.moveCursor(log.textCursor().MoveOperation.End) #reset log to end
+        if at_bottom:
+            sb.setValue(sb.maximum())
 
     def _clear_log(self, pid):
         if pid not in self.sessions:
