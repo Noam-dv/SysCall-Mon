@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QTextCursor, QTextCharFormat, QColor
 from datetime import datetime
 import time
 
@@ -8,10 +9,9 @@ from syscall_helpers import syscall_category, SysType
 
 #very simple monitor window with tabs
 #todo : make selectable system call categorys to trace 
-# also make tabs yelloow and red if anomolys detected  but thats much later
+# also make tabs yelloow and red if anomalys detected  but thats much later
  
-SYSCALL_COLORS = { #map colors 
-    #unused rn cuz we wanna prevent lag but i want to implement this
+colformat = { 
     SysType.FILE_IO: "#4fc3f7", #blue
     SysType.FS_META: "#64b5f6", #light blue
     SysType.PROCESS: "#ffb74d", #orange
@@ -21,11 +21,11 @@ SYSCALL_COLORS = { #map colors
     SysType.EVENTS: "#90a4ae", #gray
     SysType.TIME: "#ffd54f", #yellow
     SysType.SECURITY: "#e57373", #red
-    SysType.OTHER: "#b0bec5", #fallback gray
+    SysType.OTHER: "#b0bec5", #gray
 }
 
-MAX_LINES = 5000 #hard cap log to prevent crashes
-FLUSH_INTERVAL_MS = 200 #ui push rate 
+max_lines = 5000 #hard cap log to prevent crashes
+push_interval = 200 #ui push rate 
 #200ms = 0.2s
 #30*0.2 = 6
 #once every 6 ish frames
@@ -39,7 +39,7 @@ class MonitorWindow(QMainWindow):
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
 
-        #pid: log, checkboxes, tracer
+        #pid: {log, checkboxes, tracer}
         self.sessions = {} #sessions of tracers
         #multi pid tracking is implemented
         #but i disabled it on the ui end because it currently lags too much
@@ -51,14 +51,22 @@ class MonitorWindow(QMainWindow):
             Qt.WindowType.WindowCloseButtonHint
         )
 
-        # global ui flush timer
+        #cache text colors per syscall category
+        #this is the only way i can currently display colors without unbearable lag
+        self._col_cache = {}
+        for cat, col in colformat.items():
+            c = QTextCharFormat()
+            c.setForeground(QColor(col))
+            self._col_cache[cat] = c
+
+        #push to ui every few frames
         self.flush_timer = QTimer(self)
         self.flush_timer.timeout.connect(self._flush_all)
-        self.flush_timer.start(FLUSH_INTERVAL_MS)
+        self.flush_timer.start(push_interval)
 
-    def open_process(self, pid, tracer):
-        #dont open twice
-        if pid in self.sessions:
+    def open_process(self, pidname, tracer):
+        pid,name = pidname
+        if pid in self.sessions: #ignore if already being traced
             return
 
         w = QWidget()
@@ -91,13 +99,14 @@ class MonitorWindow(QMainWindow):
         log = QPlainTextEdit() #this lags like a mf 
         log.setReadOnly(True)
 
-        #potential fix for the lag with help from chatgpt
-        log._buffer = []
+        log._buffer = [] #https://stackoverflow.com/questions/57457371/load-huge-text-buffer-into-qplaintextedit
+        #append to the buffer in chunks and flush (push) all at once
+
         log._pending_lines = 0
 
         root.addWidget(log)
 
-        self.tabs.addTab(w, f"PID {pid}")
+        self.tabs.addTab(w, f"{name} [{pid}]")
         self.sessions[pid] = {
             "log": log,
             "checks": checks,
@@ -144,11 +153,9 @@ class MonitorWindow(QMainWindow):
             return
 
         ts = datetime.fromtimestamp(evt.timestamp).strftime("%H:%M:%S.%f")[:-3]
-
-        # plain text line (color handled by simplicity + speed)
         line = f"[{ts}] [{category.name}] {evt.name} ({evt.args})"
 
-        log._buffer.append(line)
+        log._buffer.append((line, category))
 
     def _flush_all(self):
         for session in self.sessions.values():
@@ -158,19 +165,31 @@ class MonitorWindow(QMainWindow):
         if not log._buffer:
             return
 
-        log.appendPlainText("\n".join(log._buffer))
+        cursor = log.textCursor()
+        cursor.movePosition(cursor.MoveOperation.End)
+
+        for t, cat in log._buffer:
+            c = self._col_cache.get(cat)
+            if c: #category exists in the cache
+                cursor.insertText(t+"\n", c)
+            else:
+                cursor.insertText(t+"\n")
+
         log._pending_lines += len(log._buffer)
         log._buffer.clear()
 
-       
-        if log.blockCount() > MAX_LINES: #delete from the top when exceeding limit
+        #delete from the top when exceeding limit
+        #only runs every flush so it doesnt lag
+        l = log.blockCount()
+        if  l > max_lines: 
             cursor = log.textCursor()
             cursor.movePosition(cursor.MoveOperation.Start)
-            for i in range(log.blockCount() - MAX_LINES):
-                cursor.select(cursor.SelectionType.BlockUnderCursor)
+            for i in range(l - max_lines):
+                cursor.select(cursor.SelectionType.BlockUnderCursor) #remove lines from top
                 cursor.removeSelectedText()
                 cursor.deleteChar()
-        log.moveCursor(log.textCursor().MoveOperation.End)
+
+        log.moveCursor(log.textCursor().MoveOperation.End) #reset log to end
 
     def _clear_log(self, pid):
         if pid not in self.sessions:

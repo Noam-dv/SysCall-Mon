@@ -88,7 +88,7 @@ class MonApp:
             tracer.start()
 
             self.tracers[pid] = tracer
-            self.monitor.open_process(pid, tracer)
+            self.monitor.open_process((pid,name), tracer)
 
         self.ui.set_status(f"will trace {len(sel)} processes")
 
@@ -147,9 +147,9 @@ class MonUI(QMainWindow):
         root.addLayout(bar)
 
         #table
-        self.table = QTableWidget(0, 7)
+        self.table = QTableWidget(0, 8)
         self.table.setHorizontalHeaderLabels([
-            "", "PID", "name", "user", "status", "cpu %", "memory (MB)" #first one is icon
+            "", "PID", "name", "user", "status", "cpu %", "memory (MB)", "type" #first one is icon
         ])
         self.table.verticalHeader().setVisible(False)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -189,8 +189,14 @@ class MonUI(QMainWindow):
             mem_item = QTableWidgetItem()
             mem_item.setData(Qt.ItemDataRole.EditRole, p.mem)
 
+            d="service" 
+            if not p.daemon: 
+                d="process"
+            type_item = QTableWidgetItem(d)
+
             self.table.setItem(r, 5, cpu_item)
             self.table.setItem(r, 6, mem_item)
+            self.table.setItem(r, 7, type_item)
 
         self.table.setSortingEnabled(True) #add sorting click once for ascending twice for descending thanks qt :)
         self.table.sortItems(6, Qt.SortOrder.DescendingOrder) #sort by memory

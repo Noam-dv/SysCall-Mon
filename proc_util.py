@@ -13,7 +13,7 @@ class ProcessData:
     user: str | None = None
     status: str | None = None
     icon: QIcon | None = None
-
+    daemon: bool=False
 
 class ProcessUtil:
     def __init__(self):
@@ -36,8 +36,9 @@ class ProcessUtil:
 
                 mem = self._get_mem_mb(p)
                 icon = self._get_icon(p)
+                daemon = self._daemon_check(p)
 
-                out.append(ProcessData(pid, name, mem, user, status, icon))
+                out.append(ProcessData(pid, name, mem, user, status, icon, daemon))
             except:
                 #process died or access denied
                 continue
@@ -110,15 +111,21 @@ class ProcessUtil:
         self._icon_cache[name] = icon
         return icon
 
+    def _daemon_check(self, p): #not exact
+        try:
+            if p.terminal() is None:
+                return True
+        except:
+            pass
+        return False
+
     def get_cpu_percent(self, pid): 
         #get cpu usage manually
         #prepping for real tracer logic
         try:
             p = psutil.Process(pid)
             now = time.time()
-
             cpu = sum(p.cpu_times()[:2]) #user+system
-
             if pid not in self._last_cpu_check:
                 self._last_cpu_check[pid] = (cpu, now)
                 return 0.0

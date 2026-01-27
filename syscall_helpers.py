@@ -3,11 +3,14 @@ import re
 import json
 from enum import Enum
 
-#syscall helpers:
-#syscall table loader
-#syscall categorization
-#categories from json so this isnt hardcoded shit
-#args from json
+'''
+syscall helpers:
+syscall table loader
+syscall categorization
+
+categories and args from json so this isnt hardcoded shit
+so many dicts luckily theyre are o(1) lookup 
+'''
 
 class SysType(Enum):
     FILE_IO = "file" #actual data read write to files
