@@ -2,10 +2,13 @@ from bcc import BPF
 import time
 import threading
 import queue
-#linux only
-#run as root
 from dataclasses import dataclass
 from syscall_helpers import *
+
+"""
+linux only
+run as root
+"""
 
 @dataclass
 class SysCall:
@@ -15,28 +18,27 @@ class SysCall:
     args: dict
     event_type: SysType.OTHER
 
-#MOVED TO SYSCALL_HELPERS.PY
-#basic important syscall categories
-#will be able to modify in the future
-#FILE_IO = {"open", "openat", "read", "write", "close", "stat", "lstat"}
-#NETWORK = {
-#    "socket", "connect", "accept",
-#    "sendto", "recvfrom", "sendmsg", "recvmsg"
-#}
-#PROCESS = {"fork", "vfork", "clone", "execve", "exit"}
-#MEMORY = {"mmap", "munmap", "brk"}
-
 
 class SysTracer:
+    """
+    SysTracer
+
+    attaches an eBPF program that traces syscalls
+    filters by pid
+    parses syscall names and arguments
+    pushes processed events into a thread-safe queue
+    """
+
     def __init__(self, pid):
         self.pid = pid
         self.running = False
 
-        #thread safe queue
-        #ui will pull from this
+        #thread safe queueui will pull from this
         self.events = queue.Queue(maxsize=4096) #max queue size prevent overflows
 
-        #default filters to have on 
+        """
+        default filters to have on
+        """
         self.filters = {
             "file": True,
             "net": True,
@@ -45,11 +47,13 @@ class SysTracer:
             "other": False
         }
 
-        #this code actually runs in kernel 
-        self.bpf = BPF(src_file="syscall_tracer.c")
+        
+        #this code actually runs in kernel
+        
+        self.bpf = BPF(src_file="syscall_tracer.c") # written in C to give the verifier an easier time (code compiles to bytecode and runs if verified)
         self.bpf["events"].open_perf_buffer(self._on_event)
 
-        #worker thread not qt rhread
+        """worker thread not qt rhread"""
         self._thread = threading.Thread(
             target=self._run,
             daemon=True
@@ -57,13 +61,15 @@ class SysTracer:
 
         self.syscall_table = load_syscall_table()
  
-        self._last_emit = 0.0 #really wanna avoid lag so we w ill rate limit
+        """really wanna avoid lag so we will rate limit"""
+        self._last_emit = 0.0
         self._emit_interval = 0.01  #100 events per sec max per pid
 
     def set_filter(self, name, val):
         self.filters[name] = val
 
     def _on_event(self, cpu, data, size):
+        """perf buffer callback"""
         try:
             now = time.time() #ratelimit
             if now - self._last_emit < self._emit_interval:
@@ -80,7 +86,6 @@ class SysTracer:
 
             raw_args = tuple(evt.args)
 
-            #parse syscall args using helper
             parsed_args = parse_syscall_args(name, raw_args)
 
             sc = SysCall(
@@ -93,21 +98,21 @@ class SysTracer:
 
             try:
                 self.events.put_nowait(sc) #try add to queue 
-                #if queue is full dont add to fix overflowing
             except queue.Full:
                 pass
 
         except Exception as e:
             print(f"[event error] {e}")
 
-    def start(self): #start tracing thread
+    def start(self):
+        """start tracing thread"""
         if self.running:
             return
         self.running = True
         self._thread.start()
 
     def _run(self):
-        #poll perf buffer
+        """poll perf buffer"""
         while self.running:
             try:
                 self.bpf.perf_buffer_poll(timeout=500)
@@ -115,8 +120,9 @@ class SysTracer:
                 pass
 
     def stop(self):
+        """stop tracing and cleanup"""
         self.running = False
         try:
-            self.bpf.cleanup() #detach and free perf bufefrs
+            self.bpf.cleanup() #detach and free perf buffers
         except:
             pass
