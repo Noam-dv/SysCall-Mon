@@ -3,10 +3,13 @@ from PyQt6.QtGui import QIcon
 from dataclasses import dataclass
 
 
-#small data holder
-#dataclass is fine here cuz this is pure data
+
 @dataclass
 class ProcessData:
+    """
+    represents a single process
+    dataclass is fine here cuz we dont need any validation or methods
+    """
     pid: int
     name: str
     mem: float
@@ -18,16 +21,18 @@ class ProcessData:
 class ProcessUtil:
     def __init__(self):
         self._last_cpu_check = {} #pid: (cpu_time, timestamp)
-        self._gio_ok = False # i guess we can utilize the dumbness of me making a util process instantiable
+        self._gio_ok = False # i guess we can utilize the dumbness of me making a util class an instantiable object (ill change this when i get to it its not top priority)
         self._gio = None
         self._icon_cache = {}
         
-    #get all running processes
-    #main entry point
     def get_all(self):
+        """
+        get all running processes
+        main entry point
+        """
         out = []
 
-        for p in psutil.process_iter(["pid", "name", "username", "status"]):
+        for p in psutil.process_iter(["pid", "name", "username", "status"]): #just go over the important stuff 
             try:
                 pid = p.pid
                 name = p.info.get("name") or "???"
@@ -38,7 +43,7 @@ class ProcessUtil:
                 icon = self._get_icon(p)
                 daemon = self._daemon_check(p)
 
-                out.append(ProcessData(pid, name, mem, user, status, icon, daemon))
+                out.append(ProcessData(pid, name, mem, user, status, icon, daemon)) #create processdata dataclass and push
             except:
                 #process died or access denied
                 continue
@@ -47,18 +52,19 @@ class ProcessUtil:
         return out
 
     def _get_mem_mb(self, p):
-        #memory in mb
+        """get memory in mb"""
         try:
             return p.memory_info().rss / (1024 * 1024)
         except:
             return 0.0
 
     def _init_gio(self): 
+        """initialize gio on runtime only if you have the package"""
         if self._gio_ok:
             return
         try:
-            import gi #moved here to not import every time we get icon 
-            #which is per process 
+            # run here instead of for each process (on the get icon)
+            import gi 
             gi.require_version("Gio", "2.0")
             from gi.repository import Gio
             self._gio = Gio
@@ -68,14 +74,16 @@ class ProcessUtil:
 
 
     def _get_icon(self, p):
-        #try to grab icon from gotten path
-        #sometimes wont work but its fine
-
-        #im still learning to develop on linux
-        #tried to implement this better
+        """
+        try to grab icon from gotten path
+        sometimes wont work but its fine
+        why is this such an issue on linux 😭
+        tried to implement this better using gio now
+        """
         
         name = p.name()
-        #cache
+        
+        #cache icons for refreshes
         if name in self._icon_cache:
             return self._icon_cache[name]
         icon = None
@@ -101,17 +109,18 @@ class ProcessUtil:
         #qt theme icon fallback
         if not icon or icon.isNull():
             try:
-                icon = QIcon.fromTheme(name.lower()) #qt theme icon (i wanna implement themes later)
+                icon = QIcon.fromTheme(name.lower())
             except:
                 pass
 
-        if not icon or icon.isNull(): #last fallback
-            icon = QIcon.fromTheme("application-x-executable") #default icon
+        if not icon or icon.isNull(): #last fallback defaults to the default linux icon
+            icon = QIcon.fromTheme("application-x-executable")
 
         self._icon_cache[name] = icon
         return icon
 
-    def _daemon_check(self, p): #not exact
+    def _daemon_check(self, p):
+        """basic daemon check just based on if the proc has a window"""
         try:
             if p.terminal() is None:
                 return True
@@ -120,8 +129,9 @@ class ProcessUtil:
         return False
 
     def get_cpu_percent(self, pid): 
-        #get cpu usage manually
-        #prepping for real tracer logic
+        """get cpu usage manually prepping for real tracer logic""" 
+
+        #this was before i wrote the tracer, idk why i took the time to do this but i wont just delete it 
         try:
             p = psutil.Process(pid)
             now = time.time()
@@ -143,9 +153,11 @@ class ProcessUtil:
             return 0.0
 
     def get_details(self, pid):
-        #get detailed info for a single process 
-        #this will be used a for future details panel that im adding 
-        #for processes being shaddowed
+        """
+        get detailed info for a single process 
+        this will be used a for future details panel that im adding 
+        for processes being shaddowed
+        """
         try:
             p = psutil.Process(pid)
 
@@ -162,7 +174,7 @@ class ProcessUtil:
                 "ppid": p.ppid(),
                 "create_time": p.create_time(),
 
-                #extra stuff (nice for procmon vibes)
+                #extra details (nice for procmon type stuff)
                 "open_files": p.open_files(),
                 "connections": p.connections(kind="inet"),
                 "nice": p.nice(),
@@ -180,9 +192,9 @@ class ProcessUtil:
             return True
         return False
 
-    #kill process
-    #will be used later for suspicious programs
+
     def kill(self, pid):
+        """kill process that will be used later for suspicious programs"""
         try:
             psutil.Process(pid).kill()
             return True
