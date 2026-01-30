@@ -59,15 +59,15 @@ procmon uses private kernal tracing and is windows signed
 
 after checking i can see i am elevated and have real admin perms 
 
-idk why kernel providers are blocked
+why can tehre only be one instance of kernal providers 😭😭😭😭
 
 
 this project no longer seems realistic
 
-one kernal tracer can be alive at once, and my anti virus is using it 
+one kernal tracer can be alive at once, and windows defender is using it 
 
 in practice:
-
+a
 only one kernel tracing session can be active ,windows already uses it, defender already owns it
 
 vpn drivers hook into it
@@ -78,15 +78,20 @@ edr hooks into it
 
 you cannot “share” it.
 
+and i assume even if i turn off defender a different process will instantly take control of it
+
 
 #### Starting from scratch: on ubuntu linux
 
-linux has much less OS constraints, and has stuff such as strace that show that this is possible
+i initially considered whether it would be possible to build on top of an existing signed kernel driver on windows but i came to the conclusion that real syscall tracing from user mode is simply restricted by the os design
 
-i will move this project from linux, adn start from scratch (Even UI)
+this makes sense windows isnt supposed to be as flexible as some other os's 
 
+which is why im choosing to switch to linux 
 
-first new linux commit will be the simple UI with process data (icons, pids, mem and other shit maybe)
+linux provides more accessible kernel systracing systems (strace, eBPF) which show that this type of tooling is entirely possible without private or signed components like procmon
+
+based on this i decided to restart the project on linux by just starting with rebuilding the UI
 
 ## LINUX COMMIT #1
 
@@ -94,7 +99,7 @@ made basic UI, used psutil to make helper functions
 
 list basic processes, try to get icon (logic better in the future)
 
-moved to PyQt6 heard it might be better ?
+moved to PyQt6 heard it might be better and provides better multithreading which ill need
 
 made some new UI 
 
@@ -111,7 +116,7 @@ next we will start working on the systracer logic
 hopefully its easier on linux
 
 ## Sys call tracing starting
-i first thought of using ptrace, but after reading a bit more i saw that a mor manual approach would be to use eBPF 
+i first thought of using ptrace, but after reading a bit more i saw that a more manual approach would be to use eBPF 
 
 ill read about it a bit now
 
@@ -216,7 +221,7 @@ for better printing
 ##### FS_META - filesystem structure and permissions not data itself but still important
 ##### PROCESS - process creation exec exit signals basically program control
 ##### MEMORY - virtual memory management mapping protection and heap stuff
-##### IPC - local process communication looks like network but isnt ( i dont really understand this one )
+##### IPC - local process communication looks like network but isnt
 ##### NETWORK - networking to other machines
 ##### EVENTS - waiting and notification syscalls (epoll poll type stuff)
 ##### TIME - sleeping timers and clocks
