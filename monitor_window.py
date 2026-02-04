@@ -6,6 +6,7 @@ import time
 
 from sys_tracer import *
 from syscall_helpers import syscall_category, SysType
+from anomaly_panel import AnomalyPanel
 
 
 """
@@ -62,6 +63,15 @@ class MonitorWindow(QMainWindow):
          again this will be useful with multiple sessions in the future
         """
         self.sessions = {}
+
+        """anomaly detection panel"""
+        self.anomaly_panel = AnomalyPanel()
+        self.tabs.addTab(self.anomaly_panel, "🔍 Anomalies")
+
+        # Connect sensitivity slider to update all tracers
+        self.anomaly_panel.sensitivity_slider.valueChanged.connect(
+            self._on_sensitivity_changed
+        )
 
         self.setWindowFlags(
             Qt.WindowType.Window |
@@ -188,7 +198,16 @@ class MonitorWindow(QMainWindow):
             return
 
         ts = datetime.fromtimestamp(evt.timestamp).strftime("%H:%M:%S.%f")[:-3]
-        line = f"[{ts}] [{category.name}] {evt.name} ({evt.args})"
+        
+        # Mark anomalous syscalls with warning emoji
+        anomaly_marker = ""
+        if evt.anomalies:
+            anomaly_marker = "⚠️ "
+            # Add anomalies to the anomaly panel
+            for anomaly in evt.anomalies:
+                self.anomaly_panel.add_anomaly(anomaly)
+        
+        line = f"[{ts}] {anomaly_marker}[{category.name}] {evt.name} ({evt.args})"
 
         log._buffer.append((line, category))
 
@@ -242,3 +261,13 @@ class MonitorWindow(QMainWindow):
         log = self.sessions[pid]["log"]
         log.clear()
         log._buffer.clear()
+
+    def _on_sensitivity_changed(self, value):
+        """Update sensitivity for all active tracers"""
+        sensitivity = value / 10.0
+        self.anomaly_panel.update_sensitivity_label()
+        
+        for session in self.sessions.values():
+            tracer = session.get("tracer")
+            if tracer:
+                tracer.set_detection_sensitivity(sensitivity)
