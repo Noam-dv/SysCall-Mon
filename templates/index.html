@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>syscall monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    /* claude generated styling */
+    /* ── variables ───────────────────────────────────────────── */
+    :root {
+      --bg:        #020804;
+      --surface:   #040d06;
+      --border:    #0d2410;
+      --border-hi: #1a4a22;
+      --p:         #00e560;   /* primary phosphor green */
+      --p-dim:     #00782e;
+      --p-muted:   #003d18;
+      --amber:     #f5a623;
+      --red:       #ff3b3b;
+      --blue:      #5eead4;
+      --white:     #c8ffd4;
+      --scanline-opacity: 0.04;
+    }
+
+    /* ── reset ───────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--p);
+      font-family: 'IBM Plex Mono', 'Share Tech Mono', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* ── CRT effects ─────────────────────────────────────────── */
+    body::before {                          /* scanlines */
+      content: "";
+      position: fixed; inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent 2px,
+        rgba(0,0,0, var(--scanline-opacity)) 2px,
+        rgba(0,0,0, var(--scanline-opacity)) 4px
+      );
+    }
+
+    body::after {                           /* vignette */
+      content: "";
+      position: fixed; inset: 0;
+      pointer-events: none;
+      z-index: 9998;
+      background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.72) 100%);
+    }
+
+    /* ── phosphor glow helper ────────────────────────────────── */
+    .glow { text-shadow: 0 0 6px var(--p), 0 0 14px rgba(0,229,96,0.4); }
+
+    /* ── layout ──────────────────────────────────────────────── */
+    .shell {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 24px 20px 48px;
+    }
+
+    /* ── header ──────────────────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 28px;
+      border-bottom: 1px solid var(--border-hi);
+      padding-bottom: 12px;
+    }
+    .header h1 {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 22px;
+      font-weight: 400;
+      color: var(--p);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .header h1::before { content: "$ "; color: var(--p-dim); }
+    .header .tagline {
+      font-size: 11px;
+      color: var(--p-dim);
+      letter-spacing: 1px;
+    }
+    .header .uptime {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--p-dim);
+    }
+    .cursor-blink {
+      display: inline-block;
+      width: 8px; height: 14px;
+      background: var(--p);
+      vertical-align: middle;
+      animation: blink 1.1s step-end infinite;
+      box-shadow: 0 0 8px var(--p);
+      margin-left: 2px;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* ── panel / card ────────────────────────────────────────── */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border-hi);
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .panel-title {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--p-dim);
+      padding: 6px 12px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,229,96,0.03);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-title::before {
+      content: "▶";
+      font-size: 8px;
+      color: var(--p);
+    }
+    .panel-body { padding: 12px; }
+
+    /* ── process toolbar ─────────────────────────────────────── */
+    .proc-toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    /* ── inputs ──────────────────────────────────────────────── */
+    input[type="text"] {
+      background: var(--bg);
+      color: var(--p);
+      border: 1px solid var(--border-hi);
+      padding: 5px 10px;
+      font-family: inherit;
+      font-size: 12px;
+      outline: none;
+      min-width: 220px;
+      caret-color: var(--p);
+      transition: border-color 0.15s;
+    }
+    input[type="text"]::placeholder { color: var(--p-muted); }
+    input[type="text"]:focus { border-color: var(--p); box-shadow: 0 0 0 1px var(--p-muted); }
+
+    /* ── buttons ─────────────────────────────────────────────── */
+    .btn {
+      background: transparent;
+      color: var(--p);
+      border: 1px solid var(--p-dim);
+      padding: 5px 14px;
+      font-family: inherit;
+      font-size: 11px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.1s, box-shadow 0.1s;
+    }
+    .btn:hover {
+      background: rgba(0,229,96,0.08);
+      box-shadow: 0 0 8px rgba(0,229,96,0.2);
+      border-color: var(--p);
+    }
+    .btn:active { background: rgba(0,229,96,0.16); }
+    .btn-danger { border-color: var(--red); color: var(--red); }
+    .btn-danger:hover { background: rgba(255,59,59,0.08); box-shadow: 0 0 8px rgba(255,59,59,0.2); }
+    .btn-accent { border-color: var(--blue); color: var(--blue); }
+    .btn-accent:hover { background: rgba(94,234,212,0.08); box-shadow: 0 0 8px rgba(94,234,212,0.2); }
+
+    #trace-status {
+      font-size: 11px;
+      color: var(--amber);
+      letter-spacing: 0.5px;
+    }
+    #trace-status::before { content: "→ "; }
+
+    /* ── process table ───────────────────────────────────────── */
+    table.proc {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    table.proc thead tr {
+      background: rgba(0,229,96,0.04);
+    }
+    table.proc th {
+      padding: 6px 10px;
+      color: var(--p-dim);
+      font-weight: 400;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border-hi);
+      text-align: left;
+    }
+    table.proc td {
+      padding: 5px 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--white);
+    }
+    table.proc td:first-child { width: 28px; }
+    table.proc tr:hover td { background: rgba(0,229,96,0.05); }
+
+    /* custom checkbox */
+    input[type="checkbox"].row-select {
+      appearance: none;
+      width: 13px; height: 13px;
+      border: 1px solid var(--p-dim);
+      background: var(--bg);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+    input[type="checkbox"].row-select:checked {
+      border-color: var(--p);
+      background: var(--p);
+    }
+    input[type="checkbox"].row-select:checked::after {
+      content: "";
+      width: 5px; height: 5px;
+      background: var(--bg);
+      display: block;
+    }
+
+    /* status badges */
+    .badge {
+      display: inline-block;
+      font-size: 10px;
+      padding: 1px 5px;
+      letter-spacing: 0.5px;
+    }
+    .badge-run  { color: var(--p); border: 1px solid var(--p-muted); }
+    .badge-slp  { color: var(--p-dim); border: 1px solid var(--border-hi); }
+    .badge-oth  { color: var(--amber); border: 1px solid rgba(245,166,35,0.3); }
+
+    /* ── filter chips ────────────────────────────────────────── */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 9px;
+      border: 1px solid var(--border-hi);
+      background: var(--bg);
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      color: var(--p-dim);
+      cursor: pointer;
+      transition: border-color 0.1s, color 0.1s;
+      user-select: none;
+    }
+    .chip:has(input:checked) {
+      border-color: var(--p-dim);
+      color: var(--white);
+      background: rgba(0,229,96,0.04);
+    }
+    .chip input { display: none; }
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .filter-spacer { flex: 1; }
+
+    /* ── log ─────────────────────────────────────────────────── */
+    .log {
+      background: var(--bg);
+      border: 1px solid var(--border-hi);
+      padding: 10px 12px;
+      height: 380px;
+      overflow-y: auto;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      position: relative;
+    }
+    .log::before {                          /* inner glow top */
+      content: "";
+      position: sticky;
+      top: 0; left: 0; right: 0;
+      height: 30px;
+      display: block;
+      background: linear-gradient(to bottom, var(--bg), transparent);
+      pointer-events: none;
+      margin: -10px -12px 0;
+    }
+    /* custom scrollbar */
+    .log::-webkit-scrollbar { width: 4px; }
+    .log::-webkit-scrollbar-track { background: var(--bg); }
+    .log::-webkit-scrollbar-thumb { background: var(--p-muted); }
+    .log::-webkit-scrollbar-thumb:hover { background: var(--p-dim); }
+
+    .log-line {
+      white-space: pre;
+      opacity: 0;
+      animation: fadein 0.2s forwards;
+    }
+    @keyframes fadein { to { opacity: 1; } }
+
+    .log-line:hover { background: rgba(0,229,96,0.04); }
+
+    .log-ts   { color: var(--p-muted); }
+    .log-cat  { font-weight: 600; }
+    .log-name { color: var(--white); }
+    .log-args { color: var(--p-dim); }
+    .log-pid  { color: var(--p-muted); }
+
+    .anomaly  { color: var(--amber) !important; }
+
+    /* ── empty / loading states ──────────────────────────────── */
+    .log-empty {
+      color: var(--p-muted);
+      font-size: 11px;
+      padding: 16px 0;
+    }
+    .log-empty::before { content: "// "; }
+
+    /* ── responsive ──────────────────────────────────────────── */
+    @media (max-width: 700px) {
+      .proc-toolbar { flex-wrap: wrap; }
+      input[type="text"] { min-width: 140px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+
+    <!-- header -->
+    <div class="header">
+      <h1>syscall-monitor<span class="cursor-blink"></span></h1>
+      <span class="tagline">kernel trace interface v0.4</span>
+      <span class="uptime" id="uptime">uptime: --:--:--</span>
+    </div>
+
+    <!-- process panel -->
+    <div class="panel">
+      <div class="panel-title">processes</div>
+      <div class="panel-body">
+        <div class="proc-toolbar">
+          <input id="search" type="text" placeholder="filter pid / name / user…"/>
+          <button class="btn" id="refresh-proc">refresh</button>
+          <button class="btn btn-accent" id="trace-selected">trace</button>
+          <span id="trace-status"></span>
+        </div>
+        <table class="proc" id="proc-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>pid</th>
+              <th>name</th>
+              <th>user</th>
+              <th>status</th>
+              <th>mem (mb)</th>
+              <th>type</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- filter panel -->
+    <div class="panel">
+      <div class="panel-title">syscall categories</div>
+      <div class="panel-body">
+        <div class="filter-bar" id="cats">
+          {% for c in categories %}
+            <label class="chip">
+              <input type="checkbox" class="cat-cb" data-value="{{ c.value }}" {% if c.checked %}checked{% endif %}>
+              <span class="dot" style="background:{{ c.color }}; box-shadow: 0 0 4px {{ c.color }}88;"></span>
+              <span>{{ c.label }}</span>
+            </label>
+          {% endfor %}
+          <div class="filter-spacer"></div>
+          <button class="btn btn-danger" id="clear">clear log</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- log panel -->
+    <div class="panel">
+      <div class="panel-title">
+        live trace output
+        <span style="margin-left:auto;font-size:10px;color:var(--p-dim);" id="event-count">0 events</span>
+      </div>
+      <div id="log" class="log">
+        <div class="log-empty">waiting for trace events…</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    /* uptime */
+    const startTime = Date.now();
+    function updateUptime() {
+      const s = Math.floor((Date.now() - startTime) / 1000);
+      const h = String(Math.floor(s / 3600)).padStart(2,'0');
+      const m = String(Math.floor((s % 3600) / 60)).padStart(2,'0');
+      const ss = String(s % 60).padStart(2,'0');
+      document.getElementById('uptime').textContent = `uptime: ${h}:${m}:${ss}`;
+    }
+    setInterval(updateUptime, 1000);
+
+    /* core */
+    const logEl = document.getElementById('log');
+    const catCbs = Array.from(document.querySelectorAll('.cat-cb'));
+    const procTbody = document.querySelector('#proc-table tbody');
+    const search = document.getElementById('search');
+    const statusEl = document.getElementById('trace-status');
+    const countEl = document.getElementById('event-count');
+
+    let lastTs = 0;
+    let eventCount = 0;
+    let seenEmpty = true;
+
+    function selectedCats() {
+      //get selected categories
+      return catCbs.filter(cb => cb.checked).map(cb => cb.dataset.value).join(',');
+    }
+
+    function appendLine(ev) {
+      //add line to the ui
+      if (seenEmpty) {
+        logEl.innerHTML = '';
+        seenEmpty = false;
+      }
+      eventCount++;
+      countEl.textContent = `${eventCount} events`;
+
+      const div = document.createElement('div');
+      div.className = 'log-line';
+
+      const ts   = new Date(ev.timestamp * 1000).toLocaleTimeString('en', {hour12:false});
+      const cat  = `[${(ev.category_name || '?').padEnd(10)}]`;
+      const name = (ev.name || '').padEnd(24);
+      const args = ev.args_str ? `(${ev.args_str})` : '()';
+      const pid  = ` pid=${String(ev.pid).padStart(6)}`;
+
+      div.innerHTML =
+        `<span class="log-ts">${ts} </span>` +
+        `<span class="log-cat" style="color:${ev.color || '#00e560'}">${cat} </span>` +
+        `<span class="log-name">${name} </span>` +
+        `<span class="log-args">${args}</span>` +
+        `<span class="log-pid">${pid}</span>`;
+
+      if (ev.anomaly) div.classList.add('anomaly');
+
+      const atBottom = logEl.scrollTop + logEl.clientHeight >= logEl.scrollHeight - 4;
+      logEl.appendChild(div);
+      if (atBottom) logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    async function poll() {
+      //poll from the events
+      try {
+        const qs = new URLSearchParams();
+        if (lastTs) qs.set('since', String(lastTs));
+        const cats = selectedCats();
+        if (cats) qs.set('cats', cats);
+        const res  = await fetch(`/api/events?${qs.toString()}`);
+        const data = await res.json();
+        for (const ev of data.events) {
+          lastTs = Math.max(lastTs, ev.timestamp);
+          appendLine(ev);
+        }
+      } catch (_) {}
+      finally { setTimeout(poll, 1000); }
+    }
+
+    catCbs.forEach(cb => cb.addEventListener('change', () => {
+      logEl.innerHTML = '<div class="log-empty">filter changed — waiting…</div>';
+      seenEmpty = true;
+      lastTs = 0;
+      eventCount = 0;
+      countEl.textContent = '0 events';
+    }));
+
+    document.getElementById('clear').addEventListener('click', async () => {
+      await fetch('/api/clear', { method: 'POST' });
+      logEl.innerHTML = '<div class="log-empty">log cleared.</div>';
+      seenEmpty = true;
+      lastTs = 0;
+      eventCount = 0;
+      countEl.textContent = '0 events';
+    });
+
+    /* proc select table */
+    async function loadProcesses() {
+      const res  = await fetch('/api/processes');
+      const data = await res.json();
+      renderProcesses(data.processes);
+    }
+
+    function statusBadge(s) {
+      if (!s) return '';
+      const cls = s.toLowerCase().startsWith('r') ? 'badge-run'
+                : s.toLowerCase().startsWith('s') ? 'badge-slp'
+                : 'badge-oth';
+      return `<span class="badge ${cls}">${s}</span>`;
+    }
+
+    function renderProcesses(items) {
+      const q = search.value.trim().toLowerCase();
+      procTbody.innerHTML = '';
+      for (const p of items) {
+        if (q && !(String(p.pid).includes(q) || p.name.toLowerCase().includes(q) || (p.user||'').toLowerCase().includes(q))) continue;
+        const tr = document.createElement('tr');
+
+        // checkbox cell
+        const td0 = document.createElement('td');
+        const cb  = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'row-select';
+        td0.appendChild(cb);
+        tr.appendChild(td0);
+
+        const fields = [
+          String(p.pid),
+          p.name || '',
+          p.user || '',
+          statusBadge(p.status),
+          Number(p.mem).toFixed(1),
+          p.type || ''
+        ];
+        for (let i = 0; i < fields.length; i++) {
+          const td = document.createElement('td');
+          if (i === 3) td.innerHTML = fields[i];
+          else td.textContent = fields[i];
+          tr.appendChild(td);
+        }
+        procTbody.appendChild(tr);
+      }
+      if (!procTbody.childElementCount) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 7;
+        td.style.cssText = 'color:var(--p-muted);padding:12px;font-size:11px;';
+        td.textContent = '// no processes match filter';
+        tr.appendChild(td);
+        procTbody.appendChild(tr);
+      }
+    }
+
+    document.getElementById('refresh-proc').addEventListener('click', loadProcesses);
+    search.addEventListener('input', loadProcesses);
+
+    document.getElementById('trace-selected').addEventListener('click', async () => {
+      const rows = Array.from(procTbody.querySelectorAll('tr')).filter(tr => tr.querySelector('.row-select')?.checked);
+      if (!rows.length) { statusEl.textContent = 'no process selected'; return; }
+      const pid  = parseInt(rows[0].children[1].textContent, 10);
+      const res  = await fetch('/api/trace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pid })
+      });
+      const data = await res.json();
+      statusEl.textContent = data.error ? data.error : `tracing pid ${pid}`;
+    });
+
+    loadProcesses();
+    poll();
+  </script>
+</body>
+</html>
