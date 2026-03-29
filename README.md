@@ -1,246 +1,98 @@
 ## demo
 [!video.webm](https://github.com/user-attachments/assets/6d4b3355-d92b-418d-a0f5-0d2d64d6622c)
 
+# sysmon
 
-## below is just my thought process
+a linux process monitor with real time syscall tracing and anomaly detection built with python and ebpf
 
-#### logging ideas:
-First main issue:
-Threads conflicting - tkinter, then pyside6 all use a main thread and therefore i had DEBUG errors due to library specific threading needed
+---
 
-second issue:
+## what it is
+
+sysmon lets you pick a running process and watch every system call it makes in real time, the calls get categorized by type so you can see at a glance whether a process is doing file io, network activity, memory operations, etc
+
+on top of that it runs a zscore based anomaly detector that builds a baseline of what normal looks like for the process and flags anything that deviates from it
+
+the ui is built with pyqt6
+
+---
+
+## why linux
+
+the original version of this was attempted on windows using etw (event tracing for windows) but windows only allows one kernel tracing session at a time and that slot is already taken by defender and other system components so real syscall tracing from user mode is simply not possible without a signed kernel driver
+
+linux has strace and ebpf which are proper accessible interfaces for this kind of thing, no signing required
+
+---
+
+## how it works
+
+### syscall tracing
+
+sysmon uses ebpf via bcc to attach a tracepoint to each process you want to monitor, when a syscall fires the ebpf program writes event data into a perf ring buffer in kernel space, bcc maps that memory into the python process and we read events from it in a background thread
+
+each event gets parsed using a syscall signature table that maps syscall numbers to argument names so you see something like `openat(dirfd=AT_FDCWD, path=/etc/hosts, flags=O_RDONLY)` instead of raw numbers (user strings dont get drefed so this is not entirely true)
+
+### categories
+
+every syscall gets bucketed into one of these
+
+- FILE_IO - actual data read and write to files
+- FS_META - filesystem structure like stat chmod rename
+- PROCESS - exec fork exit signals
+- MEMORY - mmap mprotect brk heap management
+- IPC - pipes sockets between local processes
+- NETWORK - connections to other machines
+- EVENTS - epoll poll select waiting
+- TIME - sleep nanosleep clock
+- SECURITY - setuid capabilities privilege changes
+
+### anomaly detection
+
+the detector uses a rolling zscore model per syscall category, it tracks the rate of each category over time and computes a mean and standard deviation from recent history, when the current rate deviates significantly from the baseline a suspicion score from 0 to 10 gets assigned
+
+things that raise the score
+
+- sudden spike in total syscall volume
+- spike in one specific call repeated many times
+- process shifts from one dominant category to another like file heavy suddenly going network heavy
+- a syscall category appears that has never been seen before for this process
+
+---
+
+## install
+
+you need to be on linux with python3 and bcc installed
+
+```bash
+sudo apt install -y bpfcc-tools python3-bpfcc
+pip install pyqt6 psutil
 ```
-[DEBUG] imported etw successfully
-monitoring: [(11452, 'Notepad.exe')]
-[DEBUG] __init__ with pids: [11452]
-[DEBUG] tracking PID 11452 Notepad.exe
-[DEBUG] started
-[DEBUG] starting thread
-[DEBUG] _run_trace() entered on thread
-[DEBUG] loaded 2 providers
-[DEBUG] creating etw instance
-[DEBUG] etw instance created
-[DEBUG] calling etw.start()
-[DEBUG] thread started
-[DEBUG] etw.start() stopped
-[DEBUG] _run_trace() exiting
+
+clone the repo
+
+```bash
+git clone https://github.com/yourname/sysmon
+cd sysmon
 ```
 
-as you can see above, etw instance automatically closes.
+---
 
-this could be due to several reasons, but i think in my case its conflicting session names
+## usage
 
+has to run as root for ebpf access, use -E to keep your pip packages available
 
-after adding dynamic session name swe get the same result
-
-im thinking we might be using outdated pywintrace usage ( i took code from example uses)
-
-progress: 
-
-after using DNS provider whcih is a user mode provider
-
-events did fire so we know its not hte logic its more so permission issues or provider issues?
-
-maybe im using dated providers
-
-many network events (tcp ip events) arent working supposedly cuz i have expressvpn installed but ive never used it lol
-
-??
-
-vpn might be an issue i will add a warning if you enable network events 
-
-
-looks like i ran into a real OS boundary
-
-etw is simply not gonna be enough for system call tracing 
-
-procmon uses private kernal tracing and is windows signed
-
-
-after checking i can see i am elevated and have real admin perms 
-
-why can tehre only be one instance of kernal providers 😭😭😭😭
-
-
-this project no longer seems realistic
-
-one kernal tracer can be alive at once, and windows defender is using it 
-
-in practice:
-a
-only one kernel tracing session can be active ,windows already uses it, defender already owns it
-
-vpn drivers hook into it
-
-networking stack hooks into it
-
-edr hooks into it
-
-you cannot “share” it.
-
-and i assume even if i turn off defender a different process will instantly take control of it
-
-
-#### Starting from scratch: on ubuntu linux
-
-i initially considered whether it would be possible to build on top of an existing signed kernel driver on windows but i came to the conclusion that real syscall tracing from user mode is simply restricted by the os design
-
-this makes sense windows isnt supposed to be as flexible as some other os's 
-
-which is why im choosing to switch to linux 
-
-linux provides more accessible kernel systracing systems (strace, eBPF) which show that this type of tooling is entirely possible without private or signed components like procmon
-
-based on this i decided to restart the project on linux by just starting with rebuilding the UI
-
-## LINUX COMMIT #1
-
-made basic UI, used psutil to make helper functions
-
-list basic processes, try to get icon (logic better in the future)
-
-moved to PyQt6 heard it might be better and provides better multithreading which ill need
-
-made some new UI 
-
-tried to organize my code slightly better and document it a bit more
-
-
-## LINUX COMMIT #2 AND #3
-added simple sorting 
-
-implemented more sturdy icon fetching logic cuz that really pissed me off that it was spamming the default icon
-
-next we will start working on the systracer logic 
-
-hopefully its easier on linux
-
-## Sys call tracing starting
-i first thought of using ptrace, but after reading a bit more i saw that a more manual approach would be to use eBPF 
-
-ill read about it a bit now
-
-
-after reading i understand like in windows etw there will be TONS of clutter of system calls 
-
-we will filter by type, similar to how i think procmon does it 
-
-FILE IO, NETWORK, PROCESS categorys will be shown
-
-rest will be ignored
-
-maybe ill make a long long long list of all calls and let u enable basd on presets and enable manually? we will see 
-
-
-todo: read more about ebpf understand better how it wokrs
-
-i have written the first demo of systracer, it creates a new ebpf program for each pid we shadow
-( maybe a better way tro do this later)
-
-it will log the system calls of that pid, read them in real time and using the data we can parse (Which is kind of complicated to do) we trigger the event from the window to add to the screen
-
-the data of the event is passed with the perf buffer
-
-what is a perf buffer?
-
-perf buffer is a buffer in kernal space memory, that the kernal writes the event data to
-
-BCC (the inner workings of ebpf) requests to share thast memory with our process memory with mmap
-
-and basicaly the kernal maps the perf ring buffers memory to our virtual memory so we can access it and read it
-
-
-install with ```sudo apt install -y bpfcc-tools python3-bpfcc```
-
-run with ```sudo -E python3 main.py```
-
--E keeps the environment making sure u dont need  to downlaod all ur pip packages all over again
-
-
-after extendning this it works! i tried to trace python and got about a billion write syscalls displayed
-### log:
+```bash
+sudo -E python3 main.py
 ```
-noam@noam-VirtualBox:~/sysmon$ sudo -E python3 main.py\n
-....
-tracing pid 6978
-Possibly lost 226 samples
-...
-Possibly lost 315 samples
-QBasicTimer::start: QBasicTimer can only be used with threads started with QThread
-Segmentation fault
-```
-theres so many calls that perf buffer overflows
-i guess this is normal ill try to possibly filter systemcalls further
-also we must use a qthread to work with the ui cuz we got a crash
 
+pick a process from the list, click trace, watch the events come in
 
-### LAG
-we will fix the lag
+---
 
-main issues are 
+## notes
 
-syscall rate (so fucking many)
+- rate limiting and batched ui updates are used to handle high syscall volume, some samples may still be dropped under extreme load which is normal
+- expressvpn or other vpn drivers can interfere with network event visibility
+- tested on ubuntu with kernel 5.15+
 
-textedit.append (expesnive)
-
-50ms timer (drain the queue and add hundreds of lines)
-
-
-we will rate limit, and batch ui updates
-
-
-after doing this it still lags
-
-the ui thread is doing too much work: inserting new rows, the html coloring, etc
-
-QTextEdit -> QPlainTextEdit shoulod be more optimized
-
-## working system calls
-finally after so much work system calls log 
-
-with litterally no detail tho so we'll work on that
-
-lag still exists
-
-we will have to work on that
-
-
-## passing args
-added args to the evt struct in the c file
-
-i now pass raw args and have the args of each syscall mapped out in ```!syscall_signatures.json```
-
-also wrote a helper function that gets the name of a syscall and the raw args and returns a dict of each argname with its value
-
-for better printing 
-
-
-## categorization
-
-##### FILE_IO - actual data read write to files
-##### FS_META - filesystem structure and permissions not data itself but still important
-##### PROCESS - process creation exec exit signals basically program control
-##### MEMORY - virtual memory management mapping protection and heap stuff
-##### IPC - local process communication looks like network but isnt
-##### NETWORK - networking to other machines
-##### EVENTS - waiting and notification syscalls (epoll poll type stuff)
-##### TIME - sleeping timers and clocks
-##### SECURITY - things that change authority
-
-## anomaly detection
-now the system tracer is kind of done (not really but for now its good to start on the main thing)
-
-i would really like to implement anomaly detection
-
-suspicious rate - 0-10
-
-first we have to define what an anomaly is (brackets are how suspicious this is):
-- sudden spikes in syscalls (5)
-- sudden spike in a specific call , like a lot of the same call (6)
-- syscall order that does not happen in base line (3 could happend cuz of dropped syscalls)
-- process suddenly shifts from file heavy to net heavy (5)
-- new behavior (brand new syscall that was never seen in this process) (3)
-
-After reading a bit more i like the *statistical behavior modeling* approach much more
-i will read about it more, but implement it later once i fix the lag 
-cuz it still lags a LOT
