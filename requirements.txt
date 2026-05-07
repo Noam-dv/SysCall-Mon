@@ -1,2 +1,8 @@
 psutil==5.9.8
 PyQt6==6.10.2
+requests
+flask
+flask-socketio
+flask-cors
+argon2-cffi
+bcc
