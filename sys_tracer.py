@@ -50,7 +50,7 @@ class SysTracer:
         
         #this code actually runs in kernel
         self.bpf = BPF(src_file="syscall_tracer.c") # written in C to give the verifier an easier time (code compiles to bytecode and runs if verified)
-        self.bpf["events"].open_perf_buffer(self._on_event)
+        self.bpf["events"].open_perf_buffer(self._on_event, page_cnt=64, lost_cb=lambda *_: None)
 
         #worker thread not qt thread
         self._thread = threading.Thread(
@@ -91,7 +91,11 @@ class SysTracer:
 
             raw_args = tuple(evt.args)
 
-            parsed_args = parse_syscall_args(name, raw_args)
+            #evt.path is a null terminated c string read in kernel space
+            #decode up to the first null byte cuz we use a fixed size buffer
+            path_str = bytes(evt.path).split(b"\x00", 1)[0].decode("utf-8", errors="replace") or None
+
+            parsed_args = parse_syscall_args(name, raw_args, path_str)
             cat = syscall_category(name)
             sc = SysCall(
                 pid=evt.pid,

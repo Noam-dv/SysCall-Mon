@@ -87,20 +87,30 @@ def load_syscall_signatures(path="!syscall_signatures.json"):
 
 SIGNATURES = load_syscall_signatures()
 
+#arg names that are actually strings (deref'd by ebpf)
+#ebpf only reads one path per call so first match wins
+STRING_ARG_NAMES = ("path", "filename", "oldpath", "target", "source", "linkpath")
 
-def parse_syscall_args(name:str, args:tuple):
+
+def parse_syscall_args(name:str, args:tuple, path_str:str=None):
     """
     maps syscal name and raw args
     maps to a readable dict  { argname: argval }
+    path_str is the string deref'd in kernel space (for path/filename args)
     """
     sig = SIGNATURES.get(name)
     if not sig: #no args
         return None
     parsed={}
+    swapped = False #only one string per call from ebpf
     for i, arg in enumerate(sig):
         if i >= len(args):
             break #undefined arg ig?
-        parsed[arg] = args[i]
+        if path_str and not swapped and arg in STRING_ARG_NAMES:
+            parsed[arg] = path_str #swap the pointer for the actual str
+            swapped = True
+        else:
+            parsed[arg] = args[i]
     return parsed
 
 

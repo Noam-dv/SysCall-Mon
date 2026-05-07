@@ -15,9 +15,9 @@ minimum sequences until we start judging out of the ordinary sequences
 min_samples = 30
 min_seq = 500
 
-frequency_z_thresh = 4.0 # rate spikes far from normal
+frequency_z_thresh = 3.0 # rate spikes far from normal
 sequence_prob = 0.001 # sequences rare than this are suspicious
-param_z_thresh = 5.0 # parameters have to be super far from normal cuz theyre not a good tell
+param_z_thresh = 4.0 # parameters have to be super far from normal cuz theyre not a good tell
 seq_severity_min = 0.6 #only report strong seq anomalys
 min_std_dev = 0.1 # set a minimum to avoid setting it too low and having tons of false positives
 
@@ -92,7 +92,8 @@ class FrequencyDetector:
         self.last_check_time = time.time()
 
     def add_syscall(self, category: SysType):
-        self.last_counts[category] += 1 #count syscall occurences
+        self.last_counts[category] += 1 
+        #count syscall occurences
 
     def check_and_update(self) -> List[Anomaly]:
         now = time.time() # run once per sec
@@ -229,7 +230,10 @@ class AnomalyDetector:
         self.event_buffer[pid].append((name, category, args))
 
     def analyze_batch(self) -> List[Anomaly]:
-        """process calls in chunks now rather then event based cuz its far too expesnive"""
+        """
+        process calls in chunks now rather 
+        then event based cuz its far too expesnive
+        """
         out = []
 
         for pid, events in self.event_buffer.items():
@@ -281,4 +285,5 @@ class AnomalyDetector:
         self.event_buffer.pop(pid, None)
 
     def set_sensitivity(self, level: float):
-        self.sensitivity = max(0.1,min(level,3.0)) # map between .1 and 3
+        self.sensitivity = max(0.1,min(level,3.0)) 
+        # map between .1 and 3
